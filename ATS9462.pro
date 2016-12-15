@@ -40,12 +40,20 @@ SOURCES += main.cpp\
     Digitizer/debug.cpp \
     Digitizer/qts9462.cpp \
     jSpectrumAnalyzer/jspectrumanalyzer.cpp \
-    jSpectrumAnalyzer/jspectrumanalyzer.tpp
+    jSpectrumAnalyzer/jspectrumanalyzer.tpp \
+    jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.cpp \
+    jSpectrumAnalyzer/GraphicObjects/frequencycontrols.cpp \
+    jSpectrumAnalyzer/GraphicObjects/rightclickmenu.cpp
 
 HEADERS  += mainwindow.h \
     Digitizer/ats9462.h \
     Digitizer/debug.h \
     Digitizer/qts9462.h \
-    jSpectrumAnalyzer/jspectrumanalyzer.h
+    jSpectrumAnalyzer/jspectrumanalyzer.h \
+    jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.h \
+    jSpectrumAnalyzer/GraphicObjects/frequencycontrols.h \
+    jSpectrumAnalyzer/GraphicObjects/rightclickmenu.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.ui \
+    jSpectrumAnalyzer/GraphicObjects/frequencycontrols.ui
