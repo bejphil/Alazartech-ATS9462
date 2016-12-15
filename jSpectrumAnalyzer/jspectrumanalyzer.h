@@ -27,7 +27,7 @@
 #include "../JASPL/jTypeTraits/jtypetraits.h"
 #include "../JASPL/jFFT/jfft.h"
 #include "../JASPL/jAlgorithm/jalgorithm.h"
-#include "Digitizer/qts9462.h"
+#include "../ATS9462/Digitizer/qts9462.h"
 
 namespace jaspl {
 
@@ -76,7 +76,7 @@ class jSpectrumAnalyzer : public QMainWindow {
   void SignalChanged();
 };
 
-#include "jSpectrumAnalyzer/jspectrumanalyzer.tpp"
+#include "../ATS9462/jSpectrumAnalyzer/jspectrumanalyzer.tpp"
 
 }
 

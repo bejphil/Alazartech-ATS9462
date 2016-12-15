@@ -18,6 +18,16 @@ CONFIG += c++11
 INCLUDEPATH += ../../../include
 LIBS += -L$$OUT_PWD/../../../lib
 
+LIBS += -L/usr/local/lib -L/usr/lib -lboost_iostreams -lboost_system -lboost_filesystem
+
+INCLUDEPATH +=-I "/usr/local/cuda/include"
+LIBS +=-L "/usr/local/cuda/lib64" -lOpenCL
+
+INCLUDEPATH +=-I/usr/local/include
+LIBS +=-L/usr/local/lib64 -lclFFT
+
+LIBS +=-lfftw3_threads -lfftw3 -lm
+
 LIBS += -lATSApi -L/usr/local/AlazarTech/lib
 
 QMAKE_CXXFLAGS+= -fopenmp

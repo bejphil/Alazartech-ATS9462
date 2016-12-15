@@ -13,7 +13,7 @@
 //Qt Headers
 //
 //Project specific headers
-//
+#include "../JASPL/jFFT/jfft.cpp"
 
 namespace jaspl {
 
