@@ -23,10 +23,10 @@
 #include <QMainWindow>
 #include <QTimer>
 //Project specific headers
-#include "jPlot/jplot.h"
-#include "jTypeTraits/jtypetraits.h"
-#include "jFFT/jfft.h"
-#include "jAlgorithm/jalgorithm.h"
+#include "../JASPL/jPlot/jplot.h"
+#include "../JASPL/jTypeTraits/jtypetraits.h"
+#include "../JASPL/jFFT/jfft.h"
+#include "../JASPL/jAlgorithm/jalgorithm.h"
 #include "Digitizer/qts9462.h"
 
 namespace jaspl {
