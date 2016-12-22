@@ -35,45 +35,45 @@ QT_CHARTS_USE_NAMESPACE
 
 class jSpectrumAnalyzer : public QMainWindow {
 
-  Q_OBJECT
+    Q_OBJECT
 
- public:
-  explicit jSpectrumAnalyzer(QWidget *parent = 0);
-  ~jSpectrumAnalyzer();
+  public:
+    explicit jSpectrumAnalyzer(QWidget *parent = 0);
+    ~jSpectrumAnalyzer();
 
-  void Activate();
+    void Activate();
 
-  template <class T, typename F>
-  void PlotAutoScale(T y_signal_elements , F x_frequency_range);
+    template <class T, typename F>
+    void PlotAutoScale(T y_signal_elements , F x_frequency_range);
 
-  template <class T>
-  void Plot(T y_signal_elements , double x_frequency_range);
+    template <class T>
+    void Plot(T y_signal_elements , double x_frequency_range);
 
- private:
+  private:
 
-  void ProcessSignal( std::vector < float > & series );
+    void ProcessSignal( std::vector < float > & series );
 
-  QLineSeries *spectrum_series;
-  QValueAxis *x_axis;
-  QValueAxis *y_axis;
-  QChartView *chartView;
-  QTimer *auto_timer;
-  QChart *chart;
+    QLineSeries *spectrum_series;
+    QValueAxis *x_axis;
+    QValueAxis *y_axis;
+    QChartView *chartView;
+    QTimer *auto_timer;
+    QChart *chart;
 
-  QString title = "Spectrum Analyzer";
+    QString title = "Spectrum Analyzer";
 
-  JFFT fft_er;
-  uint fft_points = 1024;
+    JFFT fft_er;
+    uint fft_points = 1024;
 
-  QTS9462 *digitizer;
-  jaspl::RecurseMean < std::vector <float > > avg;
+    QTS9462 *digitizer;
+    jaspl::RecurseMean < std::vector <float > > avg;
 
- public slots:
-  void UpdateSignal( std::vector<float> time_series , uint sample_rate );
-  void UpdateAndAverage( std::vector<float> time_series , uint sample_rate );
+  public slots:
+    void UpdateSignal( std::vector<float> time_series , uint sample_rate );
+    void UpdateAndAverage( std::vector<float> time_series , uint sample_rate );
 
- signals:
-  void SignalChanged();
+  signals:
+    void SignalChanged();
 };
 
 #include "../ATS9462/jSpectrumAnalyzer/jspectrumanalyzer.tpp"

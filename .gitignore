@@ -1,2 +1,4 @@
 #Qt-Creator generated files
 *.pro.usr*
+*.pro*
+*.pro.user

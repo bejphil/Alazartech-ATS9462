@@ -11,13 +11,13 @@
 //Boost Headers
 //
 //Qt Headers
-//
+#include <QThread>
 //Project specific headers
 #include "../JASPL/jFFT/jfft.cpp"
 
 namespace jaspl {
 
-jSpectrumAnalyzer::jSpectrumAnalyzer(QWidget *parent) : QMainWindow(parent),
+jSpectrumAnalyzer::jSpectrumAnalyzer( QWidget *parent ) : QMainWindow(parent),
   avg(fft_points / 2) {
 
   spectrum_series = new QLineSeries();
@@ -49,20 +49,17 @@ jSpectrumAnalyzer::jSpectrumAnalyzer(QWidget *parent) : QMainWindow(parent),
 
   fft_points = 1024;
 
-  fft_er.Setup(fft_points);
+  fft_er.SetUp(fft_points);
 
   setCentralWidget(chartView);
 
-
-  digitizer = new QTS9462(this);
+  digitizer = new QTS9462();
   digitizer->SetSampleRate(10e6);
   digitizer->UpdateSamplesSent(fft_points);
 
   digitizer->Start();
-  connect(digitizer, &QTS9462::VoltageTimeSeries, this,
-          &jSpectrumAnalyzer::UpdateSignal);
 
-  auto power_ctrls = new PowerControls(this);
+  auto power_ctrls = new PowerControls();
   power_ctrls->setAttribute(Qt::WA_DeleteOnClose);
   power_ctrls->setPalette(pal);
 
@@ -120,7 +117,7 @@ struct VoltsTodBm_FFTCorrection {
 
 void jSpectrumAnalyzer::ProcessSignal(std::vector < float > &time_series) {
 
-  fft_er.PowerSpectrum(time_series);
+  fft_er.PowerSpectrum( time_series );
   uint spectrum_size = time_series.size();
   float spectrum_size_f = static_cast<float>(spectrum_size);
 

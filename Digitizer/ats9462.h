@@ -26,75 +26,79 @@ namespace alazar {
 
 class ATS9462 {
 
-  enum class Channel { A, B, AB };
+    enum class Channel {
+        A, B, AB
+    };
 
- public:
+  public:
 
-  typedef std::lock_guard<std::mutex> lock;
-  ATS9462(uint system_id = 1, uint board_id = 1);
-  ~ATS9462();
-  void SetDefaultConfig();
+    typedef std::lock_guard<std::mutex> lock;
+    ATS9462(uint system_id = 1, uint board_id = 1);
+    ~ATS9462();
 
-  //Non-wrapper functions
-  std::vector<short unsigned int> PullRawData(uint data_size);
-  std::vector<float> PullVoltageData(uint data_size);
+    //Non-wrapper functions
+    virtual void SetupRingBuffer( uint buffer_size );
 
-  std::vector<short unsigned int> PullRawDataTail(uint data_size);
-  std::vector<float> PullVoltageDataTail(uint data_size);
+    virtual std::vector<short unsigned int> PullRawDataHead(uint data_size);
+    virtual std::vector<float> PullVoltageDataHead(uint data_size);
 
-  void SelectChannel(Channel selection);
+    virtual std::vector<short unsigned int> PullRawDataTail(uint data_size);
+    virtual std::vector<float> PullVoltageDataTail(uint data_size);
 
-  //Wrapper over AlazarTech API functions
-  void SetSampleRate(uint samples_per_sec);
-  void InputControlChannelA();
-  void InputControlChannelB();
-  void SetBWLimit();
-  void SetTriggerOperation();
-  void SetExternalTrigger();
-  void SetTriggerTimeOut(double trigger_timerout_sec = 0.0f);
-  void ConfigureAuxIO();
+    virtual void SetDefaultConfig();
 
-  void SetIntegrationTime(double time_sec);
-//  void SetSampleRate(double samples_per_sec);
+    void SelectChannel(Channel selection);
 
-  void StartCapture();
-  void AbortCapture();
+    //Wrapper over AlazarTech API functions
+    void SetSampleRate(uint samples_per_sec);
+    void InputControlChannelA();
+    void InputControlChannelB();
+    void SetBWLimit();
+    void SetTriggerOperation();
+    void SetExternalTrigger();
+    void SetTriggerTimeOut(double trigger_timerout_sec = 0.0f);
+    void ConfigureAuxIO();
 
- protected:
-  u_char bits_per_sample;
-  uint max_samples_per_channel;
+    void SetIntegrationTime(double time_sec);
 
-  uint bytes_per_buffer = 0;
-  uint buffers_per_acquisition = 0;
+    virtual void StartCapture();
+    virtual void AbortCapture();
+
+  protected:
+    u_char bits_per_sample;
+    uint max_samples_per_channel;
+
+    uint bytes_per_buffer = 0;
+    uint buffers_per_acquisition = 0;
 
 
-  uint buffer_count = 4;
+    uint buffer_count = 4;
 
-  uint samples_per_buffer = 204800;
+    uint samples_per_buffer = 204800;
 
-  double integration_time = 0.0f;
-  double sample_rate = 0.0f;
+    double integration_time = 0.0f;
+    double sample_rate = 0.0f;
 
-  uint ring_buffer_size = 1e8;
+    uint ring_buffer_size = 1e8;
 
- private:
+    virtual void Prequel();
+    virtual void CaptureLoop();
 
-  void Prequel();
-  void CaptureLoop();
+  private:
 
-  std::vector< std::unique_ptr< short unsigned int > > buffer_array;
-  boost::circular_buffer<short unsigned int> internal_buffer;
+    std::vector< std::unique_ptr< short unsigned int > > buffer_array;
+    boost::circular_buffer<short unsigned int> internal_buffer;
 
-  HANDLE board_handle = NULL;
-  RETURN_CODE err;
+    HANDLE board_handle = NULL;
+    RETURN_CODE err;
 
-  uint channel_mask;
-  uint channel_count = 0;
-  long unsigned int samples_since_last_read = 0;
+    uint channel_mask;
+    uint channel_count = 0;
+    long unsigned int samples_since_last_read = 0;
 
-  bool capture_switch = false;
-  std::thread ring_buffer_thread;
-  std::mutex monitor;
+    bool capture_switch = false;
+    std::thread ring_buffer_thread;
+    std::mutex monitor;
 
 };
 

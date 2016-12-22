@@ -11,8 +11,10 @@
 //
 //Qt Headers
 #include <QApplication>
+#include <QThread>
 //Project specific headers
 #include "jSpectrumAnalyzer/jspectrumanalyzer.h"
+#include "Digitizer/ats9462.h"
 
 /*! \mainpage Alazartech ATS9462 Digitier
  *
@@ -29,11 +31,18 @@
 
 int main(int argc, char *argv[]) {
 
-  QApplication a(argc, argv);
+//    QApplication a(argc, argv);
 
-  jaspl::jSpectrumAnalyzer lyzer;
-  lyzer.Activate();
+//    jaspl::jSpectrumAnalyzer lyzer;
 
-  return a.exec();
+//    return a.exec();
+
+  alazar::ATS9462 digitizer;
+  digitizer.SetSampleRate(10e6);
+  digitizer.StartCapture();
+
+  for ( uint i = 0; i < 1000 ; i++ ) {
+      digitizer.PullVoltageDataTail( 1000000 );
+  }
 
 }

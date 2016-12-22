@@ -1,10 +1,10 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#ifdef QT_DEBUG
-#define DEBUG 1
+#ifdef DEBUG
+#define DEBUG_ON 1
 #else
-#define DEBUG 0
+#define DEBUG_ON 0
 #endif
 
 // C System-Headers
@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <stdexcept>
+#include <iostream>
 //AlazarTech Headers
 #include "AlazarError.h"
 #include "AlazarApi.h"
@@ -23,7 +24,7 @@
 //
 
 #define ALAZAR_DEBUG(err, ...) \
-            do { if (DEBUG) std::cout << __func__ <<\
+            do { if (DEBUG_ON) std::cout << __func__ <<\
         __FILE__ <<\
         " Line# "<<\
         __LINE__ <<\
@@ -42,7 +43,11 @@
         throw std::runtime_error( err_str );\
     } } while (0)
 
-
+#ifdef DEBUG
+# define DEBUG_PRINT( x, ... ) std::cout << x __VA_ARGS__ << std::endl;
+#else
+# define DEBUG_PRINT(x) do {} while (0)
+#endif
 
 class alazar_error: public std::runtime_error {
 public:

@@ -5,8 +5,8 @@ QTS9462::QTS9462(QObject *parent, uint system_id,
 
   SetDefaultConfig();
 
-  auto_timer = new QTimer(this);
-  connect(auto_timer, &QTimer::timeout, this, &QTS9462::SendTimeSeries);
+//  auto_timer = new QTimer(this);
+//  connect(auto_timer, &QTimer::timeout, this, &QTS9462::SendTimeSeries);
 
 }
 
@@ -30,13 +30,13 @@ void QTS9462::UpdateSamplesSent(uint num_samples) {
 
 void QTS9462::Start() {
 
-  auto_timer->start(5);
+//  auto_timer->start(5);
   StartCapture();
 
 }
 
 void QTS9462::Stop() {
 
-  auto_timer->stop();
+//  auto_timer->stop();
   AbortCapture();
 }
