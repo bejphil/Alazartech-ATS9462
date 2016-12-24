@@ -30,11 +30,16 @@ ATS9462::ATS9462( uint system_id, uint board_id ) {
 
     SetDefaultConfig();
 
+    signal_callback = &alazar::ATS9462::SignalCallback;
+
+    DEBUG_PRINT( "Built new ATS9462" );
+
 }
 
 ATS9462::~ATS9462() {
 
     AbortCapture();
+    DEBUG_PRINT( "Destroyed ATS9462" );
 
 //  if (ring_buffer_thread.joinable()) {
 //    ring_buffer_thread.join();
@@ -386,6 +391,8 @@ void ATS9462::CaptureLoop() {
 
         for (uint i = 0; i < buffer_array.size() ; i++) {
 
+            DEBUG_PRINT( "Reading digitizer buffer #" << i );
+
             if ( samples_per_buffer > ULONG_MAX - samples_since_last_read ) {
                 samples_since_last_read = 0;
             } else {
@@ -393,30 +400,20 @@ void ATS9462::CaptureLoop() {
                 DEBUG_PRINT( "Samples since last read event " << samples_since_last_read );
             }
 
-            err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(),
-                                                500); //500 = timeout in ms.
+            err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 500); //500 = timeout in ms.
             ALAZAR_ASSERT(err);
 
-//      lock lk(monitor);
-
-            monitor.lock();
+            lock lk(monitor);
             auto head = buffer_array[i].get();
             auto tail = head + samples_per_buffer;
 
             internal_buffer.insert(internal_buffer.end(), head, tail);
-            monitor.unlock();
 
-            err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(),
-                                        bytes_per_buffer);
+            err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
 
-//      ALAZAR_ASSERT(err);
+            ALAZAR_ASSERT(err);
 
-            //Catch and ignore ApiDmaPaused error
-            if (err == 520) {
-                continue;
-            } else {
-                ALAZAR_ASSERT(err);
-            }
+            (this->*signal_callback)( samples_since_last_read );
 
         }
 
@@ -456,7 +453,7 @@ std::vector<short unsigned int> ATS9462::PullRawDataHead(uint data_size) {
 
     auto copy_vec = std::vector<short unsigned int>( first, last );
     DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );
-  samples_since_last_read = 0;
+    samples_since_last_read = 0;
 
     return copy_vec;
 }
@@ -484,7 +481,8 @@ std::vector<short unsigned int> ATS9462::PullRawDataTail(uint data_size) {
 
     //Need to lock as soon as we access iterators so they are not
     //made invalid while this function is executing
-    lock lk(monitor);
+    lock lk( monitor );
+
     auto first = internal_buffer.end() - data_size;
     auto last = internal_buffer.end() ;
 
@@ -499,14 +497,41 @@ std::vector<short unsigned int> ATS9462::PullRawDataTail(uint data_size) {
         return std::vector<short unsigned int>() = { 0 };
     }
 
-    auto copy_vec = std::vector<short unsigned int>(first, last);
+    auto copy_vec = std::vector< short unsigned int >( first, last );
     DEBUG_PRINT( "Read " << copy_vec.size() << " samples from tail of ring buffer." );
-  samples_since_last_read = 0;
+    samples_since_last_read = 0;
+//    (this->*signal_callback)( samples_since_last_read );
 
     return copy_vec;
-    //  internal_buffer.erase(internal_buffer.end() - data_size,
-    //                        internal_buffer.end());
 }
+
+//std::vector< short unsigned int > ATS9462::PullRawDataTail( uint data_size ) {
+
+//    //Need to lock as soon as we access iterators so they are not
+//    //made invalid while this function is executing
+//    lock lk(monitor);
+
+//    auto first = internal_buffer.end() - data_size;
+//    auto last = internal_buffer.end() ;
+
+//    //Attempt to read more samples than are current stored in
+//    //the ring buffer
+//    bool check_condition = (std::distance(first, last) < data_size);
+//    //Attempt to read data that was read in last cycle ( eg. Old Data )
+//    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
+
+//    if (check_condition) {
+//        DEBUG_PRINT( __func__ << " Read Failed, not enough samples in ring buffer" );
+//        return std::vector<short unsigned int>() = { 0 };
+//    }
+
+//    std::vector< short unsigned int > copy_vec( data_size );
+//    std::copy( first, last, std::begin(copy_vec) );
+
+//    samples_since_last_read = 0;
+
+//    return copy_vec;
+//}
 
 std::vector<float> ATS9462::PullVoltageDataTail(uint data_size) {
 
@@ -527,8 +552,8 @@ std::vector<float> ATS9462::PullVoltageDataTail(uint data_size) {
     converted_data.reserve( data_size );
 
     for (uint i = 0; i < raw_data.size() ; i ++) {
-        converted_data.push_back( raw_data[i] );
-//        converted_data[i] = SamplesToVolts(raw_data[i]);
+//        converted_data.push_back( raw_data[i] );
+        converted_data[i] = SamplesToVolts(raw_data[i]);
     }
 
     return converted_data;

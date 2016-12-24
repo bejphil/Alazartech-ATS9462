@@ -5,6 +5,7 @@
 #include <iostream>
 #include <chrono>
 #include <unistd.h>
+#include <thread>
 //OpenCL Headers
 //
 //Boost Headers
@@ -14,7 +15,9 @@
 #include <QThread>
 //Project specific headers
 #include "jSpectrumAnalyzer/jspectrumanalyzer.h"
+#include "../JASPL/jPlot/jplot.h"
 #include "Digitizer/ats9462.h"
+#include "Digitizer/ats9462engine.h"
 
 /*! \mainpage Alazartech ATS9462 Digitier
  *
@@ -37,12 +40,24 @@ int main(int argc, char *argv[]) {
 
 //    return a.exec();
 
-  alazar::ATS9462 digitizer;
-  digitizer.SetSampleRate(10e6);
-  digitizer.StartCapture();
+//  alazar::ATS9462 digitizer;
 
-  for ( uint i = 0; i < 1000 ; i++ ) {
-      digitizer.PullVoltageDataTail( 1000000 );
-  }
+    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 180e6, 5 ) );
+    digitizer->SetSampleRate( 180e6 );
+    digitizer->SetupRingBuffer( 500e6 );
+    digitizer->StartCapture();
+
+    digitizer->Start();
+
+    sleep( 10 );
+
+    if ( digitizer->Finished() ) {
+        auto signal = digitizer->FinishedSignal();
+        jaspl::plot( signal, 1604 );
+    } else {
+        std::cout << "Wasn't finished" << std::endl;
+    }
+
+    digitizer->Stop();
 
 }

@@ -83,6 +83,13 @@ class ATS9462 {
 
     virtual void Prequel();
     virtual void CaptureLoop();
+    virtual void SignalCallback( unsigned long signal_size ) {
+        DEBUG_PRINT( "alazar::ATS9462::SignalCallBack" );
+    }
+
+    void (ATS9462::*signal_callback)( unsigned long ) = NULL;
+
+
 
   private:
 

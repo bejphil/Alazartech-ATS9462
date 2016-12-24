@@ -23,6 +23,16 @@
 // Miscellaneous Headers
 //
 
+#define TIME_IT( func, ... ) \
+    do { \
+        auto start = std::chrono::high_resolution_clock::now(); \
+        func \
+        auto end = std::chrono::high_resolution_clock::now();\
+        std::chrono::duration<double, std::milli> ms = end - start;\
+        auto time_taken = ms.count();\
+        std::cout<< "Function took " << time_taken <<" ms." << std::endl;\
+    } while (0)
+
 #define ALAZAR_DEBUG(err, ...) \
             do { if (DEBUG_ON) std::cout << __func__ <<\
         __FILE__ <<\
@@ -50,23 +60,23 @@
 #endif
 
 class alazar_error: public std::runtime_error {
-public:
+  public:
 
-  alazar_error( RETURN_CODE ret ): runtime_error( "AlazarTech Error" ), err( ret ) {}
+    alazar_error( RETURN_CODE ret ): runtime_error( "AlazarTech Error" ), err( ret ) {}
 
-  virtual const char* what() const throw()
-  {
-    cnvt.str( "" );
+    virtual const char* what() const throw() {
+        cnvt.str( "" );
 
-    cnvt << runtime_error::what() << GetErrCode() ;
+        cnvt << runtime_error::what() << GetErrCode() ;
 
-    return cnvt.str().c_str();
-  }
+        return cnvt.str().c_str();
+    }
 
-  int GetErrCode() const
-    { return err; }
+    int GetErrCode() const {
+        return err;
+    }
 
-private:
+  private:
     RETURN_CODE err;
     static std::ostringstream cnvt;
 };
