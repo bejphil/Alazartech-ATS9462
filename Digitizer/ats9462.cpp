@@ -41,10 +41,6 @@ ATS9462::~ATS9462() {
     AbortCapture();
     DEBUG_PRINT( "Destroyed ATS9462" );
 
-//  if (ring_buffer_thread.joinable()) {
-//    ring_buffer_thread.join();
-//  }
-
 }
 
 void ATS9462::SetDefaultConfig() {
@@ -326,20 +322,24 @@ void ATS9462::Prequel() {
     // Calculate the size of each DMA buffer in bytes
 
     float bytes_per_sample = (float)((bits_per_sample + 7) / 8);
-    bytes_per_buffer = (uint)(bytes_per_sample * samples_per_buffer *
-                              channel_count + 0.5);
 
     // Calculate the number of buffers in the acquisition
 
-    long int samples_per_acquisition = static_cast<long int>
-                                       (sample_rate * integration_time +
-                                        0.5);
+    samples_per_acquisition = static_cast<long int>
+                              (sample_rate * integration_time +
+                               0.5);
 
-    buffers_per_acquisition = static_cast<uint>((samples_per_acquisition +
-                              samples_per_buffer -
-                              1) / samples_per_buffer);
+    samples_per_buffer = static_cast<uint>( (samples_per_acquisition + samples_per_buffer - 1) / buffers_per_acquisition );
+
+    bytes_per_buffer = (uint)(bytes_per_sample * samples_per_buffer *
+                              channel_count + 0.5);
+
+//    buffers_per_acquisition = static_cast<uint>((samples_per_acquisition +
+//                              samples_per_buffer -
+//                              1) / samples_per_buffer);
 
     DEBUG_PRINT( "Getting " << samples_per_acquisition << " total samples per acquisition." );
+    DEBUG_PRINT( "Using " << samples_per_buffer << " samples per buffer." );
     DEBUG_PRINT( "Using " << buffers_per_acquisition << " individual buffers." );
 
     buffer_array.clear();
@@ -381,10 +381,74 @@ void ATS9462::StartCapture() {
     DEBUG_PRINT( "Capture Started (Ring Buffer Thread Spinning)" );
 
     ring_buffer_thread = std::thread(&ATS9462::CaptureLoop, this);
-//  ring_buffer_thread.detach();
+//    ring_buffer_thread.detach();
 
 }
 
+void ATS9462::CaptureLoop() {
+
+    while( capture_switch == true ) {
+
+        monitor.lock();
+
+        for (uint i = 0; i < buffer_array.size() ; i++) {
+
+            DEBUG_PRINT( "Dumping critical buffer #" << i );
+
+//            monitor.lock();
+
+            err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 500); //500 = timeout in ms.
+            ALAZAR_ASSERT(err);
+
+            auto head = buffer_array[i].get();
+            auto tail = head + samples_per_buffer;
+
+            internal_buffer.insert( internal_buffer.end(), head, tail );
+
+            monitor.unlock();
+
+            err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
+            ALAZAR_ASSERT(err);
+
+        }
+
+//        monitor.unlock();
+
+        if ( samples_per_buffer > ULONG_MAX - samples_since_last_read ) {
+            samples_since_last_read -= samples_per_acquisition;
+        } else {
+            samples_since_last_read += samples_per_acquisition;
+            DEBUG_PRINT( "Samples since last read event " << samples_since_last_read );
+        }
+
+        (this->*signal_callback)( samples_since_last_read );
+
+//        monitor.lock();
+//        uint current_samples = critical_buffer.size();
+
+//        if( current_samples == 0 ) {
+//            monitor.unlock();
+//            continue;
+//        }
+
+//        internal_buffer.insert( internal_buffer.begin(), critical_buffer.begin(), critical_buffer.end() );
+
+//        DEBUG_PRINT( "Dumped " << current_samples << " into main buffer." );
+//        critical_buffer.clear();
+//        monitor.unlock();
+
+//        if ( samples_per_buffer > ULONG_MAX - samples_since_last_read ) {
+//            samples_since_last_read -= current_samples;
+//        } else {
+//            samples_since_last_read += current_samples;
+//            DEBUG_PRINT( "Samples since last read event " << samples_since_last_read );
+//        }
+
+//        (this->*signal_callback)( samples_since_last_read );
+    }
+}
+
+/*
 void ATS9462::CaptureLoop() {
 
     while (capture_switch == true) {
@@ -400,25 +464,30 @@ void ATS9462::CaptureLoop() {
                 DEBUG_PRINT( "Samples since last read event " << samples_since_last_read );
             }
 
+            monitor.lock();
+
             err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 500); //500 = timeout in ms.
             ALAZAR_ASSERT(err);
 
-            lock lk(monitor);
+//            lock w_lock(monitor);
+
+//            monitor.lock();
             auto head = buffer_array[i].get();
             auto tail = head + samples_per_buffer;
 
             internal_buffer.insert(internal_buffer.end(), head, tail);
 
-            err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
-
-            ALAZAR_ASSERT(err);
-
             (this->*signal_callback)( samples_since_last_read );
+            monitor.unlock();
+
+            err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
+            ALAZAR_ASSERT(err);
 
         }
 
     }
 }
+*/
 
 inline float SamplesToVolts(short unsigned int sample_value) {
     // AlazarTech digitizers are calibrated as follows
@@ -432,11 +501,9 @@ inline float SamplesToVolts(short unsigned int sample_value) {
     return inputRange_volts * ((sample_value - codeZero) / codeRange);
 }
 
-std::vector<short unsigned int> ATS9462::PullRawDataHead(uint data_size) {
+bool ATS9462::CheckHead( uint data_size ) {
 
-    //Need to lock as soon as we access iterators so they are not
-    //made invalid while this function is executing
-    lock lk(monitor);
+    lock r_lock(monitor);
     auto first = internal_buffer.begin() + 0;
     auto last = internal_buffer.begin() + data_size;
 
@@ -447,9 +514,45 @@ std::vector<short unsigned int> ATS9462::PullRawDataHead(uint data_size) {
     check_condition |= ((uint)std::distance(first, last) > samples_since_last_read);
 
     if (check_condition) {
-        DEBUG_PRINT( __func__ << " Read Failed, not enough samples in ring buffer" );
+        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+    } else {
+        DEBUG_PRINT( __func__ << " Able to read." );
+    }
+
+    return !check_condition;
+}
+
+bool ATS9462::CheckTail( uint data_size ) {
+
+    lock r_lock(monitor);
+    auto first = internal_buffer.end() - data_size;
+    auto last = internal_buffer.end() ;
+
+    //Attempt to read more samples than are current stored in
+    //the ring buffer
+    bool check_condition = (std::distance(first, last) < data_size);
+    //Attempt to read data that was read in last cycle ( eg. Old Data )
+    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
+
+    if (check_condition) {
+        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+    } else {
+        DEBUG_PRINT( __func__ << " Able to read." );
+    }
+
+    return !check_condition;
+}
+
+std::vector<short unsigned int> ATS9462::PullRawDataHead(uint data_size) {
+
+    if ( !CheckHead(data_size) ) {
+        DEBUG_PRINT( __func__ << " Read Failed!" );
         return std::vector<short unsigned int>() = { 0 };
     }
+
+    lock r_lock(monitor);
+    auto first = internal_buffer.begin() + 0;
+    auto last = internal_buffer.begin() + data_size;
 
     auto copy_vec = std::vector<short unsigned int>( first, last );
     DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );
@@ -479,13 +582,10 @@ std::vector<float> ATS9462::PullVoltageDataHead(uint data_size) {
 
 std::vector<short unsigned int> ATS9462::PullRawDataTail(uint data_size) {
 
-    //Need to lock as soon as we access iterators so they are not
-    //made invalid while this function is executing
-    lock lk( monitor );
+    lock r_lock( monitor );
 
     auto first = internal_buffer.end() - data_size;
     auto last = internal_buffer.end() ;
-
     //Attempt to read more samples than are current stored in
     //the ring buffer
     bool check_condition = (std::distance(first, last) < data_size);
@@ -493,14 +593,15 @@ std::vector<short unsigned int> ATS9462::PullRawDataTail(uint data_size) {
     check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
 
     if (check_condition) {
-        DEBUG_PRINT( __func__ << " Read Failed, not enough samples in ring buffer" );
+        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
         return std::vector<short unsigned int>() = { 0 };
+    } else {
+        DEBUG_PRINT( __func__ << " Able to read." );
     }
 
     auto copy_vec = std::vector< short unsigned int >( first, last );
-    DEBUG_PRINT( "Read " << copy_vec.size() << " samples from tail of ring buffer." );
+
     samples_since_last_read = 0;
-//    (this->*signal_callback)( samples_since_last_read );
 
     return copy_vec;
 }
@@ -565,15 +666,19 @@ void ATS9462::AbortCapture() {
 
     DEBUG_PRINT( "Capture stopped" );
 
-    if (ring_buffer_thread.joinable()) {
-        ring_buffer_thread.join();
+    if ( ring_buffer_thread.joinable() ) {
+        try {
+            ring_buffer_thread.join();
+        } catch (std::system_error &e) {
+            std::cout << "Thread joining failed!" << e.what() << std::endl;
+        }
     }
 
     DEBUG_PRINT( "Ring buffer thread re-joined main thread" );
 
     //Almost always throws, especially when called through destructor?
     err = AlazarAbortAsyncRead(board_handle);
-//  ALAZAR_ASSERT(err);
+    ALAZAR_ASSERT(err);
 }
 
 }

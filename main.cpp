@@ -42,14 +42,14 @@ int main(int argc, char *argv[]) {
 
 //  alazar::ATS9462 digitizer;
 
-    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 180e6, 5 ) );
-    digitizer->SetSampleRate( 180e6 );
+    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 50e6, 10 ) );
+    digitizer->SetSampleRate( 50e6 );
     digitizer->SetupRingBuffer( 500e6 );
     digitizer->StartCapture();
 
     digitizer->Start();
 
-    sleep( 10 );
+    sleep( 30 );
 
     if ( digitizer->Finished() ) {
         auto signal = digitizer->FinishedSignal();
@@ -59,5 +59,4 @@ int main(int argc, char *argv[]) {
     }
 
     digitizer->Stop();
-
 }

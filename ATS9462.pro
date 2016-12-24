@@ -15,10 +15,12 @@ TEMPLATE = app
 
 CONFIG += c++11
 
+DEFINES += "DEBUG"
+
 CONFIG(debug, debug|release) {
-    DEFINES += "DEBUG"
+#    DEFINES += "DEBUG"
 } else {
-    DEFINES += "NDEBUG"
+#    DEFINES += "NDEBUG"
     QMAKE_CXXFLAGS -= -O2
     QMAKE_CXXFLAGS += -O3
 }
@@ -31,6 +33,8 @@ LIBS += -L/usr/local/lib \
         -lboost_iostreams \
         -lboost_system \
         -lboost_filesystem \
+        -lboost_system \
+        -lboost_thread \
         -pthread
 
 INCLUDEPATH +=/opt/AMDAPPSDK-3.0/include/

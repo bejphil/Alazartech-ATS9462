@@ -23,6 +23,12 @@
 // Miscellaneous Headers
 //
 
+#define ALAZAR_RECURSE( func, ... ) \
+    RETURN_CODE ret_val;\
+    do { \
+        ret_val = func\
+    } while ( ret_val != ApiSuccess )\
+
 #define TIME_IT( func, ... ) \
     do { \
         auto start = std::chrono::high_resolution_clock::now(); \

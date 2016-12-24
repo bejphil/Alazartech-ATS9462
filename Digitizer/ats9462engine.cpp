@@ -5,19 +5,29 @@
 ATS9462Engine::ATS9462Engine( uint signal_samples, uint num_averages ) :\
     average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
     number_averages( num_averages),\
-    samples_per_average( signal_samples ) {
+    samples_per_average( signal_samples ), \
+    fft_er( false ) \
+{
 
     samples_half = (samples_per_average % 2 == 0) ? (samples_per_average / 2) : (( samples_per_average - 1) / 2);
 
     fft_er.SetUp( signal_samples );
 
     DEBUG_PRINT( "Built new ATS9462Engine" );
-
 }
 
 ATS9462Engine::~ATS9462Engine() {
 
-    Stop();
+    for ( auto& thread : worker_threads ) {
+        if ( thread.joinable() ) {
+            try {
+                thread.join();
+            } catch (std::system_error &e) {
+                std::cout << "Thread joining failed!" << e.what() << std::endl;
+            }
+        }
+    }
+
     fft_er.TearDown();
     DEBUG_PRINT( "Destroyed ATS9462Engine" );
 }
@@ -25,6 +35,8 @@ ATS9462Engine::~ATS9462Engine() {
 void ATS9462Engine::Start() {
 
     ready_flag == false;
+    average_engine.Reset();
+
     signal_callback = static_cast< void (alazar::ATS9462::*)( unsigned long )>( &ATS9462Engine::CallBackUpdate );
 
 }
@@ -33,18 +45,23 @@ void ATS9462Engine::Stop() {
 
     DEBUG_PRINT( "ATS9462Engine: Averaging finished, stopping...");
 
-    for ( auto& thread : worker_threads ) {
-        if ( thread.joinable() ) {
-            thread.join();
-        }
-    }
-
-    current_signal = average_engine.ReturnValue();
-
-    average_engine.Reset();
-
-    ready_flag = true;
     signal_callback = static_cast< void (alazar::ATS9462::*)( unsigned long )>( &ATS9462Engine::CallBackWait );
+
+//    for ( auto& thread : worker_threads ) {
+//        if ( thread.joinable() ) {
+//            try {
+//                thread.join();
+//            } catch (std::system_error &e) {
+//                std::cout << "Thread joining failed!" << e.what() << std::endl;
+//            }
+//        }
+//    }
+
+//    current_signal = average_engine.ReturnValue();
+
+//    average_engine.Reset();
+//    ready_flag = true;
+
 }
 
 void ATS9462Engine::CallBackWait( unsigned long signal_size ) {
@@ -56,23 +73,21 @@ void ATS9462Engine::CallBackUpdate( unsigned long signal_size ) {
 
     DEBUG_PRINT( "ATS9462Engine::CallBackUpdate" );
 
-    uint N = static_cast<uint>( average_engine.Index() );
+    DEBUG_PRINT( "ATS9462Engine::Current pending index " << pending_avg_index );
 
-    if ( N >= number_averages ) {
+    if ( pending_avg_index >= number_averages ) {
         Stop();
         return;
     }
 
     if ( signal_size >= samples_per_average ) {
 
-//        TIME_IT( PullRawDataTail( samples_per_average ); );
+        if( CheckTail( samples_per_average ) ) {
 
-        auto thread = std::thread( &ATS9462Engine::UpdateAverage, this );
-        worker_threads.push_back( std::move(thread) );
+            pending_avg_index ++;
+            worker_threads.push_back( std::thread( &ATS9462Engine::UpdateAverage, this ) );
+        }
 
-//        auto ret_val = std::async( &ATS9462Engine::UpdateAverage, this );
-//        auto raw_data = ret_val.get();
-//        UpdateAverage();
     }
 }
 
@@ -95,18 +110,6 @@ struct VoltsTodBm_FFTCorrection {
     }
 };
 
-inline float SamplesToVolts(short unsigned int sample_value) {
-    // AlazarTech digitizers are calibrated as follows
-    int bitsPerSample = 16;
-    float codeZero = (1 << (bitsPerSample - 1)) - 0.5;
-    float codeRange = (1 << (bitsPerSample - 1)) - 0.5;
-
-    float inputRange_volts = 0.400f;
-
-    // Convert sample code to volts
-    return inputRange_volts * ((sample_value - codeZero) / codeRange);
-}
-
 inline float Samples2VoltsFast( short unsigned int sample_value ) {
     return 0.400f*( (sample_value - ( ( 1 << 15 ) - 0.5 ) ) / ( ( 1 << 15 ) - 0.5 )  );
 }
@@ -114,17 +117,14 @@ inline float Samples2VoltsFast( short unsigned int sample_value ) {
 void ATS9462Engine::UpdateAverage() {
 
     DEBUG_PRINT( "ATS9462Engine Updating Average..." );
+//    auto raw_data = PullRawDataTail( samples_per_average );
 
-//    auto ret_val = std::async( &alazar::ATS9462::PullRawDataTail, this, samples_per_average);
-//    auto raw_data = ret_val.get();
-
-    auto raw_data = PullRawDataTail( samples_per_average );
-
-    if( raw_data.size() < samples_per_average )
-        return;
+    std::vector < short unsigned int > raw_data;
+    do {
+        raw_data = PullRawDataTail( samples_per_average );
+    } while ( raw_data.size() < samples_per_average );
 
     std::vector<float> volts_data;
-
     volts_data.reserve( raw_data.size() );
 
     for (uint i = 0; i < raw_data.size() ; i ++) {
@@ -135,7 +135,7 @@ void ATS9462Engine::UpdateAverage() {
 
     float samples_f = static_cast<float>( samples_per_average );
 
-    volts_data.erase(volts_data.end() - samples_half , volts_data.end());
+    volts_data.erase( volts_data.end() - samples_half , volts_data.end() );
 
     std::for_each( volts_data.begin(), volts_data.end(), VoltsTodBm_FFTCorrection(samples_f) );
 
@@ -147,9 +147,9 @@ void ATS9462Engine::UpdateAverage() {
 }
 
 bool ATS9462Engine::Finished() {
-    return ready_flag;
+    return( static_cast<uint>( average_engine.Index() >= number_averages ) );
 }
 
 std::vector < float > ATS9462Engine::FinishedSignal() {
-    return current_signal;
+    return average_engine.ReturnValue();
 }

@@ -19,6 +19,7 @@
 // Boost Headers
 #include "boost/circular_buffer.hpp"
 #include <boost/lockfree/spsc_queue.hpp>
+
 // Project Specific Headers
 #include "debug.h"
 
@@ -33,12 +34,15 @@ class ATS9462 {
   public:
 
     typedef std::lock_guard<std::mutex> lock;
+
     ATS9462(uint system_id = 1, uint board_id = 1);
     ~ATS9462();
 
     //Non-wrapper functions
     virtual void SetupRingBuffer( uint buffer_size );
 
+    virtual bool CheckHead( uint data_size );
+    virtual bool CheckTail( uint data_size );
     virtual std::vector<short unsigned int> PullRawDataHead(uint data_size);
     virtual std::vector<float> PullVoltageDataHead(uint data_size);
 
@@ -69,12 +73,11 @@ class ATS9462 {
     uint max_samples_per_channel;
 
     uint bytes_per_buffer = 0;
-    uint buffers_per_acquisition = 0;
+    const uint buffers_per_acquisition = 8;
 
+    long int samples_per_acquisition = 0;
 
-    uint buffer_count = 4;
-
-    uint samples_per_buffer = 204800;
+    uint samples_per_buffer = 204800*32;
 
     double integration_time = 0.0f;
     double sample_rate = 0.0f;
@@ -84,12 +87,10 @@ class ATS9462 {
     virtual void Prequel();
     virtual void CaptureLoop();
     virtual void SignalCallback( unsigned long signal_size ) {
-        DEBUG_PRINT( "alazar::ATS9462::SignalCallBack" );
+        DEBUG_PRINT( "alazar::ATS9462::SignalCallBack " << signal_size );
     }
 
     void (ATS9462::*signal_callback)( unsigned long ) = NULL;
-
-
 
   private:
 
@@ -104,6 +105,7 @@ class ATS9462 {
     long unsigned int samples_since_last_read = 0;
 
     bool capture_switch = false;
+
     std::thread ring_buffer_thread;
     std::mutex monitor;
 

@@ -43,13 +43,13 @@ class ATS9462Engine : public alazar::ATS9462 {
 
     typedef jaspl::RecurseMean< std::vector < float > > float_vec_avg;
     float_vec_avg average_engine;
-//    std::unique_ptr< float_vec_avg > average_engine;
 
     std::vector < float > current_signal;
     jaspl::JFFT fft_er;
 
     uint samples_half;
     bool ready_flag = false;
+    uint pending_avg_index = 0;
 
     void clean_up();
     std::vector< std::thread > worker_threads;
