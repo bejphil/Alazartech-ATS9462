@@ -1,52 +1,83 @@
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H
 
+// C System-Headers
+//
+// C++ System headers
 #include <mutex>
 #include <vector>
-
+//AlazarTech Headers
+//
+// Boost Headers
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
+// Project Specific Headers
+#include "../Digitizer/debug.h"
+
+namespace threadsafe {
 
 template < typename T >
-class RingBuffer {
+class ring_buffer {
 
     typedef boost::mutex::scoped_lock lock;
 
   public:
-    RingBuffer();
-    RingBuffer( uint buffer_size );
+    ring_buffer();
+    ring_buffer( uint buffer_size );
 
-    void HeadInsert( T& to_insert );
-    void TailInsert( T*& to_insert, uint insert_size );
+    void HeadInsert( T* to_insert );
+    void TailInsert( T* to_insert, uint insert_size );
 
     std::vector<T> HeadRead( uint read_size );
+    bool CheckHead( uint read_size );
+
     std::vector<T> TailRead( uint read_size );
+    bool CheckTail( uint read_size );
 
     uint index();
+    uint size();
 
   private:
 
     void update_counter( uint insert_size );
 
     boost::circular_buffer<T> internal_buffer;
-    std::mutex monitor;
+    boost::mutex monitor;
     uint last_read_counter = 0;
 
 };
 
 template < typename T >
-uint RingBuffer<T>::index() {
+ring_buffer<T>::ring_buffer() {
+    //
+}
+
+template < typename T>
+ring_buffer<T>::ring_buffer( uint buffer_size ) : internal_buffer( buffer_size ) {
+    DEBUG_PRINT( "Built new ring_buffer of size " << buffer_size );
+}
+
+template < typename T >
+uint ring_buffer<T>::index() {
     lock read_lock( monitor );
     return last_read_counter;
 }
 
 template < typename T >
-void RingBuffer<T>::TailInsert( T*& to_insert, uint insert_size ) {
+uint ring_buffer<T>::size() {
+    lock read_lock( monitor );
+    return internal_buffer.size();
+}
 
-    lock write_lock( monitor );
+template < typename T >
+void ring_buffer<T>::TailInsert( T* to_insert, uint insert_size ) {
+
+    DEBUG_PRINT( "Inserting " << insert_size << " elements into ring buffer" );
+
+//    lock write_lock( monitor );
     auto head = to_insert;
     auto tail = head + insert_size;
 
@@ -56,7 +87,7 @@ void RingBuffer<T>::TailInsert( T*& to_insert, uint insert_size ) {
 }
 
 template < typename T >
-bool RingBuffer<T>::CheckHead( uint data_size ) {
+bool ring_buffer<T>::CheckHead( uint data_size ) {
 
     lock read_lock(monitor);
     auto first = internal_buffer.begin();
@@ -78,7 +109,7 @@ bool RingBuffer<T>::CheckHead( uint data_size ) {
 }
 
 template < typename T >
-bool RingBuffer<T>::CheckTail( uint data_size ) {
+bool ring_buffer<T>::CheckTail( uint data_size ) {
 
     lock read_lock(monitor);
     auto first = internal_buffer.end() - data_size;
@@ -100,7 +131,7 @@ bool RingBuffer<T>::CheckTail( uint data_size ) {
 }
 
 template < typename T >
-std::vector<T> RingBuffer<T>::TailRead( uint read_size ) {
+std::vector<T> ring_buffer<T>::TailRead( uint read_size ) {
 
     lock read_lock( monitor );
 
@@ -128,14 +159,14 @@ std::vector<T> RingBuffer<T>::TailRead( uint read_size ) {
 
     auto copy_vec = std::vector< T >( first, last );
 
-    read_size = 0;
+    last_read_counter = 0;
 
     return copy_vec;
 
 }
 
 template < typename T >
-std::vector<T> RingBuffer<T>::HeadRead( uint read_size ) {
+std::vector<T> ring_buffer<T>::HeadRead( uint read_size ) {
 
     lock read_lock( monitor );
 
@@ -162,13 +193,13 @@ std::vector<T> RingBuffer<T>::HeadRead( uint read_size ) {
 
     auto copy_vec = std::vector< T >( first, last );
 
-    read_size = 0;
+    last_read_counter = 0;
 
     return copy_vec;
 }
 
 template < typename T >
-uint RingBuffer<T>::update_counter( uint insert_size ) {
+void ring_buffer<T>::update_counter( uint insert_size ) {
 
     lock write_lock( monitor );
     if ( insert_size > ( ULONG_MAX - last_read_counter ) ) {
@@ -177,6 +208,8 @@ uint RingBuffer<T>::update_counter( uint insert_size ) {
         last_read_counter += insert_size;
         DEBUG_PRINT( "Samples since last read event " << last_read_counter );
     }
+
+}
 
 }
 

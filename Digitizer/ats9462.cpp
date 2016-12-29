@@ -13,7 +13,7 @@
 
 namespace alazar {
 
-ATS9462::ATS9462( uint system_id, uint board_id ) {
+ATS9462::ATS9462( uint system_id, uint board_id, uint ring_buffer_size ) : internal_buffer( ring_buffer_size ) {
 
     board_handle = AlazarGetBoardBySystemID(system_id, board_id);
 
@@ -46,7 +46,7 @@ ATS9462::~ATS9462() {
 void ATS9462::SetDefaultConfig() {
 
     SelectChannel(Channel::A);
-    SetupRingBuffer( 1e8 );
+//    SetupRingBuffer( 1e8 );
     SetSampleRate( 10e6 );
     InputControlChannelA();
     InputControlChannelB();
@@ -60,10 +60,11 @@ void ATS9462::SetDefaultConfig() {
 
 }
 
-void ATS9462::SetupRingBuffer( uint buffer_size ) {
-    internal_buffer = boost::circular_buffer<unsigned short int> (buffer_size);
-    ring_buffer_size = buffer_size;
-}
+//void ATS9462::SetupRingBuffer( uint buffer_size ) {
+////    internal_buffer = boost::circular_buffer<unsigned short int> (buffer_size);
+//    internal_buffer = threadsafe::ring_buffer< unsigned short int > ( buffer_size );
+//    ring_buffer_size = buffer_size;
+//}
 
 void ATS9462::SelectChannel(Channel selection) {
     switch (selection) {
@@ -389,8 +390,6 @@ void ATS9462::CaptureLoop() {
 
     while( capture_switch == true ) {
 
-        monitor.lock();
-
         for (uint i = 0; i < buffer_array.size() ; i++) {
 
             DEBUG_PRINT( "Dumping critical buffer #" << i );
@@ -400,19 +399,20 @@ void ATS9462::CaptureLoop() {
             err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 500); //500 = timeout in ms.
             ALAZAR_ASSERT(err);
 
-            auto head = buffer_array[i].get();
-            auto tail = head + samples_per_buffer;
+//            auto head = buffer_array[i].get();
+//            auto tail = head + samples_per_buffer;
 
-            internal_buffer.insert( internal_buffer.end(), head, tail );
+//            internal_buffer.insert( internal_buffer.end(), head, tail );
 
-            monitor.unlock();
+            internal_buffer.TailInsert( buffer_array[i].get(), samples_per_buffer );
+
+//            monitor.unlock();
 
             err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
             ALAZAR_ASSERT(err);
 
         }
 
-//        monitor.unlock();
 
         if ( samples_per_buffer > ULONG_MAX - samples_since_last_read ) {
             samples_since_last_read -= samples_per_acquisition;
@@ -423,28 +423,6 @@ void ATS9462::CaptureLoop() {
 
         (this->*signal_callback)( samples_since_last_read );
 
-//        monitor.lock();
-//        uint current_samples = critical_buffer.size();
-
-//        if( current_samples == 0 ) {
-//            monitor.unlock();
-//            continue;
-//        }
-
-//        internal_buffer.insert( internal_buffer.begin(), critical_buffer.begin(), critical_buffer.end() );
-
-//        DEBUG_PRINT( "Dumped " << current_samples << " into main buffer." );
-//        critical_buffer.clear();
-//        monitor.unlock();
-
-//        if ( samples_per_buffer > ULONG_MAX - samples_since_last_read ) {
-//            samples_since_last_read -= current_samples;
-//        } else {
-//            samples_since_last_read += current_samples;
-//            DEBUG_PRINT( "Samples since last read event " << samples_since_last_read );
-//        }
-
-//        (this->*signal_callback)( samples_since_last_read );
     }
 }
 
@@ -501,60 +479,74 @@ inline float SamplesToVolts(short unsigned int sample_value) {
     return inputRange_volts * ((sample_value - codeZero) / codeRange);
 }
 
-bool ATS9462::CheckHead( uint data_size ) {
+//bool ATS9462::CheckHead( uint data_size ) {
 
-    lock r_lock(monitor);
-    auto first = internal_buffer.begin() + 0;
-    auto last = internal_buffer.begin() + data_size;
+//    lock r_lock(monitor);
+//    auto first = internal_buffer.begin() + 0;
+//    auto last = internal_buffer.begin() + data_size;
 
-    //Attempt to read more samples than are current stored in
-    //the ring buffer
-    bool check_condition = (std::distance(first, last) < data_size);
-    //Attempt to read data that was read in last cycle ( eg. Old Data )
-    check_condition |= ((uint)std::distance(first, last) > samples_since_last_read);
+//    //Attempt to read more samples than are current stored in
+//    //the ring buffer
+//    bool check_condition = (std::distance(first, last) < data_size);
+//    //Attempt to read data that was read in last cycle ( eg. Old Data )
+//    check_condition |= ((uint)std::distance(first, last) > samples_since_last_read);
 
-    if (check_condition) {
-        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
-    } else {
-        DEBUG_PRINT( __func__ << " Able to read." );
-    }
+//    if (check_condition) {
+//        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+//    } else {
+//        DEBUG_PRINT( __func__ << " Able to read." );
+//    }
 
-    return !check_condition;
-}
+//    return !check_condition;
+//}
 
-bool ATS9462::CheckTail( uint data_size ) {
+//bool ATS9462::CheckTail( uint data_size ) {
 
-    lock r_lock(monitor);
-    auto first = internal_buffer.end() - data_size;
-    auto last = internal_buffer.end() ;
+//    lock r_lock(monitor);
+//    auto first = internal_buffer.end() - data_size;
+//    auto last = internal_buffer.end() ;
 
-    //Attempt to read more samples than are current stored in
-    //the ring buffer
-    bool check_condition = (std::distance(first, last) < data_size);
-    //Attempt to read data that was read in last cycle ( eg. Old Data )
-    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
+//    //Attempt to read more samples than are current stored in
+//    //the ring buffer
+//    bool check_condition = (std::distance(first, last) < data_size);
+//    //Attempt to read data that was read in last cycle ( eg. Old Data )
+//    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
 
-    if (check_condition) {
-        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
-    } else {
-        DEBUG_PRINT( __func__ << " Able to read." );
-    }
+//    if (check_condition) {
+//        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+//    } else {
+//        DEBUG_PRINT( __func__ << " Able to read." );
+//    }
 
-    return !check_condition;
-}
+//    return !check_condition;
+//}
 
-std::vector<short unsigned int> ATS9462::PullRawDataHead(uint data_size) {
+//std::vector<short unsigned int> ATS9462::PullRawDataHead(uint data_size) {
 
-    if ( !CheckHead(data_size) ) {
+//    if ( !CheckHead(data_size) ) {
+//        DEBUG_PRINT( __func__ << " Read Failed!" );
+//        return std::vector<short unsigned int>() = { 0 };
+//    }
+
+//    lock r_lock(monitor);
+//    auto first = internal_buffer.begin() + 0;
+//    auto last = internal_buffer.begin() + data_size;
+
+//    auto copy_vec = std::vector<short unsigned int>( first, last );
+//    DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );
+//    samples_since_last_read = 0;
+
+//    return copy_vec;
+//}
+
+std::vector<short unsigned int> ATS9462::PullRawDataHead( uint data_size ) {
+
+    if ( !internal_buffer.CheckHead(data_size) ) {
         DEBUG_PRINT( __func__ << " Read Failed!" );
         return std::vector<short unsigned int>() = { 0 };
     }
 
-    lock r_lock(monitor);
-    auto first = internal_buffer.begin() + 0;
-    auto last = internal_buffer.begin() + data_size;
-
-    auto copy_vec = std::vector<short unsigned int>( first, last );
+    auto copy_vec = internal_buffer.HeadRead( data_size );
     DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );
     samples_since_last_read = 0;
 
@@ -580,27 +572,41 @@ std::vector<float> ATS9462::PullVoltageDataHead(uint data_size) {
     return converted_data;
 }
 
-std::vector<short unsigned int> ATS9462::PullRawDataTail(uint data_size) {
+//std::vector<short unsigned int> ATS9462::PullRawDataTail(uint data_size) {
 
-    lock r_lock( monitor );
+//    lock r_lock( monitor );
 
-    auto first = internal_buffer.end() - data_size;
-    auto last = internal_buffer.end() ;
-    //Attempt to read more samples than are current stored in
-    //the ring buffer
-    bool check_condition = (std::distance(first, last) < data_size);
-    //Attempt to read data that was read in last cycle ( eg. Old Data )
-    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
+//    auto first = internal_buffer.end() - data_size;
+//    auto last = internal_buffer.end() ;
+//    //Attempt to read more samples than are current stored in
+//    //the ring buffer
+//    bool check_condition = (std::distance(first, last) < data_size);
+//    //Attempt to read data that was read in last cycle ( eg. Old Data )
+//    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
 
-    if (check_condition) {
-        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+//    if (check_condition) {
+//        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+//        return std::vector<short unsigned int>() = { 0 };
+//    } else {
+//        DEBUG_PRINT( __func__ << " Able to read." );
+//    }
+
+//    auto copy_vec = std::vector< short unsigned int >( first, last );
+
+//    samples_since_last_read = 0;
+
+//    return copy_vec;
+//}
+
+std::vector<short unsigned int> ATS9462::PullRawDataTail( uint data_size ) {
+
+    if ( !internal_buffer.CheckTail(data_size) ) {
+        DEBUG_PRINT( __func__ << " Read Failed!" );
         return std::vector<short unsigned int>() = { 0 };
-    } else {
-        DEBUG_PRINT( __func__ << " Able to read." );
     }
 
-    auto copy_vec = std::vector< short unsigned int >( first, last );
-
+    auto copy_vec = internal_buffer.TailRead( data_size );
+    DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );
     samples_since_last_read = 0;
 
     return copy_vec;
@@ -642,7 +648,7 @@ std::vector<float> ATS9462::PullVoltageDataTail(uint data_size) {
 
     }
 
-    auto raw_data = PullRawDataTail(data_size);
+    auto raw_data = PullRawDataTail( data_size );
 
     if (raw_data.size() <= 1)
         return std::vector<float>() = { 0.0f };

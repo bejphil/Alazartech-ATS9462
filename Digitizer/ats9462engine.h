@@ -22,7 +22,7 @@ class ATS9462Engine : public alazar::ATS9462 {
     typedef std::lock_guard<std::mutex> lock;
 
   public:
-    ATS9462Engine(uint signal_samples , uint num_averages);
+    ATS9462Engine(uint signal_samples , uint num_averages, uint ring_buffer_size );
     ~ATS9462Engine();
 
     void Start();
@@ -55,7 +55,7 @@ class ATS9462Engine : public alazar::ATS9462 {
     std::vector< std::thread > worker_threads;
     void Rebin( std::vector < float >& to_bin );
 
-    std::mutex read_monitor;
+//    std::mutex read_monitor;
 };
 
 #endif // ATS9462ENGINE_H

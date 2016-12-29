@@ -2,9 +2,10 @@
 #include <thread>
 #include <future>
 
-ATS9462Engine::ATS9462Engine( uint signal_samples, uint num_averages ) :\
-    average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
+ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_buffer_size) :\
+    alazar::ATS9462( 1, 1, ring_buffer_size ),\
     number_averages( num_averages),\
+    average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
     samples_per_average( signal_samples ), \
     fft_er( false ) \
 {
@@ -34,7 +35,7 @@ ATS9462Engine::~ATS9462Engine() {
 
 void ATS9462Engine::Start() {
 
-    ready_flag == false;
+    ready_flag = false;
     average_engine.Reset();
 
     signal_callback = static_cast< void (alazar::ATS9462::*)( unsigned long )>( &ATS9462Engine::CallBackUpdate );
@@ -82,7 +83,7 @@ void ATS9462Engine::CallBackUpdate( unsigned long signal_size ) {
 
     if ( signal_size >= samples_per_average ) {
 
-        if( CheckTail( samples_per_average ) ) {
+        if( internal_buffer.CheckTail( samples_per_average ) ) {
 
             pending_avg_index ++;
             worker_threads.push_back( std::thread( &ATS9462Engine::UpdateAverage, this ) );
@@ -114,6 +115,18 @@ inline float Samples2VoltsFast( short unsigned int sample_value ) {
     return 0.400f*( (sample_value - ( ( 1 << 15 ) - 0.5 ) ) / ( ( 1 << 15 ) - 0.5 )  );
 }
 
+inline float SamplesToVolts(short unsigned int sample_value) {
+    // AlazarTech digitizers are calibrated as follows
+    int bitsPerSample = 16;
+    float codeZero = (1 << (bitsPerSample - 1)) - 0.5;
+    float codeRange = (1 << (bitsPerSample - 1)) - 0.5;
+
+    float inputRange_volts = 0.400f;
+
+    // Convert sample code to volts
+    return inputRange_volts * ((sample_value - codeZero) / codeRange);
+}
+
 void ATS9462Engine::UpdateAverage() {
 
     DEBUG_PRINT( "ATS9462Engine Updating Average..." );
@@ -128,7 +141,7 @@ void ATS9462Engine::UpdateAverage() {
     volts_data.reserve( raw_data.size() );
 
     for (uint i = 0; i < raw_data.size() ; i ++) {
-        volts_data.push_back( Samples2VoltsFast( raw_data[i] ) );
+        volts_data.push_back( SamplesToVolts( raw_data[i] ) );
     }
 
     fft_er.PowerSpectrum( volts_data );

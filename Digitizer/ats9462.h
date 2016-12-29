@@ -22,6 +22,7 @@
 
 // Project Specific Headers
 #include "debug.h"
+#include "../Containers/ringbuffer.h"
 
 namespace alazar {
 
@@ -35,14 +36,14 @@ class ATS9462 {
 
     typedef std::lock_guard<std::mutex> lock;
 
-    ATS9462(uint system_id = 1, uint board_id = 1);
+    ATS9462(uint system_id = 1, uint board_id = 1, uint ring_buffer_size = 1e8 );
     ~ATS9462();
 
     //Non-wrapper functions
-    virtual void SetupRingBuffer( uint buffer_size );
+//    virtual void SetupRingBuffer( uint buffer_size );
 
-    virtual bool CheckHead( uint data_size );
-    virtual bool CheckTail( uint data_size );
+//    virtual bool CheckHead( uint data_size );
+//    virtual bool CheckTail( uint data_size );
     virtual std::vector<short unsigned int> PullRawDataHead(uint data_size);
     virtual std::vector<float> PullVoltageDataHead(uint data_size);
 
@@ -82,7 +83,7 @@ class ATS9462 {
     double integration_time = 0.0f;
     double sample_rate = 0.0f;
 
-    uint ring_buffer_size = 1e8;
+//    uint ring_buffer_size = 1e8;
 
     virtual void Prequel();
     virtual void CaptureLoop();
@@ -92,10 +93,12 @@ class ATS9462 {
 
     void (ATS9462::*signal_callback)( unsigned long ) = NULL;
 
+    threadsafe::ring_buffer< short unsigned int > internal_buffer;
+
   private:
 
     std::vector< std::unique_ptr< short unsigned int > > buffer_array;
-    boost::circular_buffer<short unsigned int> internal_buffer;
+//    boost::circular_buffer<short unsigned int> internal_buffer;
 
     HANDLE board_handle = NULL;
     RETURN_CODE err;
@@ -107,7 +110,7 @@ class ATS9462 {
     bool capture_switch = false;
 
     std::thread ring_buffer_thread;
-    std::mutex monitor;
+//    std::mutex monitor;
 
 };
 
