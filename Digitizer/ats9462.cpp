@@ -330,13 +330,13 @@ void ATS9462::Prequel() {
                               (sample_rate * integration_time +
                                0.5);
 
-    samples_per_buffer = static_cast<uint>( (samples_per_acquisition + samples_per_buffer - 1) / buffers_per_acquisition );
+//    samples_per_buffer = static_cast<uint>( (samples_per_acquisition + samples_per_buffer - 1) / buffers_per_acquisition );
 
     bytes_per_buffer = (uint)(bytes_per_sample * samples_per_buffer * channel_count + 0.5);
 
-//    buffers_per_acquisition = static_cast<uint>((samples_per_acquisition +
-//                              samples_per_buffer -
-//                              1) / samples_per_buffer);
+    buffers_per_acquisition = static_cast<uint>((samples_per_acquisition +
+                              samples_per_buffer -
+                              1) / samples_per_buffer);
 
     DEBUG_PRINT( "Getting " << samples_per_acquisition << " total samples per acquisition." );
     DEBUG_PRINT( "Using " << samples_per_buffer << " samples per buffer." );
@@ -346,7 +346,7 @@ void ATS9462::Prequel() {
 
     for (uint i = 0; i < buffers_per_acquisition; i ++) {
 //        buffer_array.push_back(std::unique_ptr< short unsigned int>((short unsigned int *)malloc(bytes_per_buffer)));
-        buffer_array.push_back(std::unique_ptr< short unsigned int>( new short unsigned int[ samples_per_buffer] ) );
+        buffer_array.push_back(std::unique_ptr< short unsigned int>( (short unsigned int*)aligned_alloc( byte_alignment, bytes_per_buffer ) ) );
     }
 
     uint adma_flags = ADMA_EXTERNAL_STARTCAPTURE | ADMA_CONTINUOUS_MODE;
@@ -416,47 +416,6 @@ void ATS9462::CaptureLoop() {
     }
 }
 
-/*
-void ATS9462::CaptureLoop() {
-
-    while (capture_switch == true) {
-
-        for (uint i = 0; i < buffer_array.size() ; i++) {
-
-            DEBUG_PRINT( "Reading digitizer buffer #" << i );
-
-            if ( samples_per_buffer > ULONG_MAX - samples_since_last_read ) {
-                samples_since_last_read = 0;
-            } else {
-                samples_since_last_read += samples_per_buffer;
-                DEBUG_PRINT( "Samples since last read event " << samples_since_last_read );
-            }
-
-            monitor.lock();
-
-            err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 500); //500 = timeout in ms.
-            ALAZAR_ASSERT(err);
-
-//            lock w_lock(monitor);
-
-//            monitor.lock();
-            auto head = buffer_array[i].get();
-            auto tail = head + samples_per_buffer;
-
-            internal_buffer.insert(internal_buffer.end(), head, tail);
-
-            (this->*signal_callback)( samples_since_last_read );
-            monitor.unlock();
-
-            err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
-            ALAZAR_ASSERT(err);
-
-        }
-
-    }
-}
-*/
-
 inline float SamplesToVolts(short unsigned int sample_value) {
     // AlazarTech digitizers are calibrated as follows
     int bitsPerSample = 16;
@@ -468,66 +427,6 @@ inline float SamplesToVolts(short unsigned int sample_value) {
     // Convert sample code to volts
     return inputRange_volts * ((sample_value - codeZero) / codeRange);
 }
-
-//bool ATS9462::CheckHead( uint data_size ) {
-
-//    lock r_lock(monitor);
-//    auto first = internal_buffer.begin() + 0;
-//    auto last = internal_buffer.begin() + data_size;
-
-//    //Attempt to read more samples than are current stored in
-//    //the ring buffer
-//    bool check_condition = (std::distance(first, last) < data_size);
-//    //Attempt to read data that was read in last cycle ( eg. Old Data )
-//    check_condition |= ((uint)std::distance(first, last) > samples_since_last_read);
-
-//    if (check_condition) {
-//        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
-//    } else {
-//        DEBUG_PRINT( __func__ << " Able to read." );
-//    }
-
-//    return !check_condition;
-//}
-
-//bool ATS9462::CheckTail( uint data_size ) {
-
-//    lock r_lock(monitor);
-//    auto first = internal_buffer.end() - data_size;
-//    auto last = internal_buffer.end() ;
-
-//    //Attempt to read more samples than are current stored in
-//    //the ring buffer
-//    bool check_condition = (std::distance(first, last) < data_size);
-//    //Attempt to read data that was read in last cycle ( eg. Old Data )
-//    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
-
-//    if (check_condition) {
-//        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
-//    } else {
-//        DEBUG_PRINT( __func__ << " Able to read." );
-//    }
-
-//    return !check_condition;
-//}
-
-//std::vector<short unsigned int> ATS9462::PullRawDataHead(uint data_size) {
-
-//    if ( !CheckHead(data_size) ) {
-//        DEBUG_PRINT( __func__ << " Read Failed!" );
-//        return std::vector<short unsigned int>() = { 0 };
-//    }
-
-//    lock r_lock(monitor);
-//    auto first = internal_buffer.begin() + 0;
-//    auto last = internal_buffer.begin() + data_size;
-
-//    auto copy_vec = std::vector<short unsigned int>( first, last );
-//    DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );
-//    samples_since_last_read = 0;
-
-//    return copy_vec;
-//}
 
 std::vector<short unsigned int> ATS9462::PullRawDataHead( uint data_size ) {
 
@@ -562,32 +461,6 @@ std::vector<float> ATS9462::PullVoltageDataHead(uint data_size) {
     return converted_data;
 }
 
-//std::vector<short unsigned int> ATS9462::PullRawDataTail(uint data_size) {
-
-//    lock r_lock( monitor );
-
-//    auto first = internal_buffer.end() - data_size;
-//    auto last = internal_buffer.end() ;
-//    //Attempt to read more samples than are current stored in
-//    //the ring buffer
-//    bool check_condition = (std::distance(first, last) < data_size);
-//    //Attempt to read data that was read in last cycle ( eg. Old Data )
-//    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
-
-//    if (check_condition) {
-//        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
-//        return std::vector<short unsigned int>() = { 0 };
-//    } else {
-//        DEBUG_PRINT( __func__ << " Able to read." );
-//    }
-
-//    auto copy_vec = std::vector< short unsigned int >( first, last );
-
-//    samples_since_last_read = 0;
-
-//    return copy_vec;
-//}
-
 std::vector<short unsigned int> ATS9462::PullRawDataTail( uint data_size ) {
 
     if ( !internal_buffer.CheckTail(data_size) ) {
@@ -602,55 +475,16 @@ std::vector<short unsigned int> ATS9462::PullRawDataTail( uint data_size ) {
     return copy_vec;
 }
 
-//std::vector< short unsigned int > ATS9462::PullRawDataTail( uint data_size ) {
-
-//    //Need to lock as soon as we access iterators so they are not
-//    //made invalid while this function is executing
-//    lock lk(monitor);
-
-//    auto first = internal_buffer.end() - data_size;
-//    auto last = internal_buffer.end() ;
-
-//    //Attempt to read more samples than are current stored in
-//    //the ring buffer
-//    bool check_condition = (std::distance(first, last) < data_size);
-//    //Attempt to read data that was read in last cycle ( eg. Old Data )
-//    check_condition |= ( (uint)std::distance(first, last) > samples_since_last_read);
-
-//    if (check_condition) {
-//        DEBUG_PRINT( __func__ << " Read Failed, not enough samples in ring buffer" );
-//        return std::vector<short unsigned int>() = { 0 };
-//    }
-
-//    std::vector< short unsigned int > copy_vec( data_size );
-//    std::copy( first, last, std::begin(copy_vec) );
-
-//    samples_since_last_read = 0;
-
-//    return copy_vec;
-//}
-
 std::vector<float> ATS9462::PullVoltageDataTail(uint data_size) {
 
-    if (internal_buffer.size() <= data_size) {
-        DEBUG_PRINT( __func__ << " Read Failed, not enough samples in ring buffer" );
-        return std::vector < float >() = { 0.0f };
-
-    }
-
     auto raw_data = PullRawDataTail( data_size );
-
-    if (raw_data.size() <= 1)
-        return std::vector<float>() = { 0.0f };
-
-//    std::vector<float> converted_data(data_size, 0.0f);
 
     std::vector<float> converted_data;
     converted_data.reserve( data_size );
 
     for (uint i = 0; i < raw_data.size() ; i ++) {
-//        converted_data.push_back( raw_data[i] );
-        converted_data[i] = SamplesToVolts(raw_data[i]);
+        converted_data.push_back( raw_data[i] );
+//        converted_data[i] = SamplesToVolts(raw_data[i]);
     }
 
     return converted_data;

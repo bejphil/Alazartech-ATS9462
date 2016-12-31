@@ -73,18 +73,21 @@ class ATS9462 {
     u_char bits_per_sample;
     uint max_samples_per_channel;
 
+    // All buffer read from the digitizer MUST
+    // have a 64 byte alignment, e.g. the need
+    // to be allocated with aligned_alloc( 64, 64*buffer_bytes );
+    const uint byte_alignment = 64;
+
     uint bytes_per_buffer = 0;
-    const uint buffers_per_acquisition = 8;
+//    const uint buffers_per_acquisition = 8;
 
     long int samples_per_acquisition = 0;
 
-    uint samples_per_buffer = 204800*32;
-//    uint buffers_per_acquisition = 8;
+    const uint samples_per_buffer = 204800*64;
+    uint buffers_per_acquisition = 8;
 
     double integration_time = 0.0f;
     double sample_rate = 0.0f;
-
-//    uint ring_buffer_size = 1e8;
 
     virtual void Prequel();
     virtual void CaptureLoop();

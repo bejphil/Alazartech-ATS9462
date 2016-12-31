@@ -15,12 +15,12 @@ TEMPLATE = app
 
 CONFIG += c++11
 
-DEFINES += "DEBUG"
+#DEFINES += "DEBUG"
 
 CONFIG(debug, debug|release) {
-#    DEFINES += "DEBUG"
+    DEFINES += "DEBUG"
 } else {
-#    DEFINES += "NDEBUG"
+    DEFINES += "NDEBUG"
     QMAKE_CXXFLAGS -= -O2
     QMAKE_CXXFLAGS += -O3
 }

@@ -7,7 +7,7 @@ ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_
     number_averages( num_averages),\
     average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
     samples_per_average( signal_samples ), \
-    fft_er( false ) \
+    fft_er( true ) \
 {
 
     samples_half = (samples_per_average % 2 == 0) ? (samples_per_average / 2) : (( samples_per_average - 1) / 2);
@@ -49,10 +49,8 @@ void ATS9462Engine::Stop() {
 
     signal_callback = static_cast< void (alazar::ATS9462::*)( unsigned long )>( &ATS9462Engine::CallBackWait );
 
-//    current_signal = average_engine.ReturnValue();
-
 //    average_engine.Reset();
-//    ready_flag = true;
+    ready_flag = true;
 
 }
 
@@ -115,20 +113,18 @@ inline float SamplesToVolts(short unsigned int sample_value) {
 
 void ATS9462Engine::UpdateAverage() {
 
-    DEBUG_PRINT( "ATS9462Engine Updating Average..." );
+//    DEBUG_PRINT( "ATS9462Engine Updating Average..." );
 //    auto raw_data = PullRawDataTail( samples_per_average );
 
-    std::vector < short unsigned int > raw_data;
-    do {
-        raw_data = PullRawDataTail( samples_per_average );
-    } while ( raw_data.size() < samples_per_average );
+//    std::vector<float> volts_data;
+//    volts_data.reserve( raw_data.size() );
 
-    std::vector<float> volts_data;
-    volts_data.reserve( raw_data.size() );
+//    for (uint i = 0; i < raw_data.size() ; i ++) {
+//        volts_data.push_back( SamplesToVolts( raw_data[i] ) );
+//    }
 
-    for (uint i = 0; i < raw_data.size() ; i ++) {
-        volts_data.push_back( SamplesToVolts( raw_data[i] ) );
-    }
+//    raw_data.clear();
+    auto volts_data = PullVoltageDataTail( samples_per_average );
 
     fft_er.PowerSpectrum( volts_data );
 
@@ -138,12 +134,12 @@ void ATS9462Engine::UpdateAverage() {
 
     std::for_each( volts_data.begin(), volts_data.end(), VoltsTodBm_FFTCorrection(samples_f) );
 
-    float time_correction = 1.0f / integration_time;
-    if( time_correction != 1.0f ) {
-        std::for_each(volts_data.begin(),\
-                      volts_data.end(),\
-                      std::bind1st (std::multiplies <float> (), time_correction) );
-    }
+//    float time_correction = 1.0f / integration_time;
+//    if( time_correction != 1.0f ) {
+//        std::for_each(volts_data.begin(),\
+//                      volts_data.end(),\
+//                      std::bind1st (std::multiplies <float> (), time_correction) );
+//    }
     average_engine( volts_data );
 }
 
