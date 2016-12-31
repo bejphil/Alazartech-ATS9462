@@ -36,6 +36,7 @@ class ATS9462Engine : public alazar::ATS9462 {
 
     void CallBackUpdate( unsigned long signal_size );
     void CallBackWait( unsigned long signal_size );
+    void ThreadCallback( unsigned int num_threads );
 
   private:
 
@@ -49,9 +50,14 @@ class ATS9462Engine : public alazar::ATS9462 {
     uint samples_half;
     bool ready_flag = false;
     uint pending_avg_index = 0;
+    uint num_active_threads = 0;
+    const uint thread_limit = 10; // Limits the number of threads that can be alive at any time
 
     void clean_up();
+
     std::vector< std::thread > worker_threads;
+    void ThreadCleanUp();
+
     void Rebin( std::vector < float >& to_bin );
 
 //    std::mutex read_monitor;

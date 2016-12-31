@@ -28,13 +28,17 @@ class ring_buffer {
     ring_buffer();
     ring_buffer( uint buffer_size );
 
-    void HeadInsert( T* to_insert );
+    void HeadInsert( T* to_insert, uint insert_size );
     void TailInsert( T* to_insert, uint insert_size );
 
     std::vector<T> HeadRead( uint read_size );
+    template < typename F >
+    std::vector< F > HeadReadAndConvert( uint read_size );
     bool CheckHead( uint read_size );
 
     std::vector<T> TailRead( uint read_size );
+    template < typename F >
+    std::vector< F > TailReadAndConvert( uint read_size );
     bool CheckTail( uint read_size );
 
     uint index();
@@ -175,7 +179,43 @@ std::vector<T> ring_buffer<T>::TailRead( uint read_size ) {
     //buffer_not_empty.notify_one();
 
     return copy_vec;
+}
 
+template < typename T >
+template < typename F >
+std::vector< F > ring_buffer< T >::TailReadAndConvert( uint read_size ) {
+
+    // get shared access
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
+
+    auto first = internal_buffer.end() - read_size;
+    auto last = internal_buffer.end() ;
+    //Attempt to read more samples than are current stored in
+    //the ring buffer
+    bool check_condition = (std::distance(first, last) < read_size);
+    //Attempt to read data that was read in last cycle ( eg. Old Data )
+    check_condition |= ( (uint)std::distance(first, last) > last_read_counter);
+
+    if (check_condition) {
+        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+
+        std::string err_str = "Not enough new data in ring buffer: Have ";
+        err_str += boost::lexical_cast<std::string>( last_read_counter);
+        err_str += " new data samples, but  ";
+        err_str += boost::lexical_cast<std::string>( read_size );
+        err_str += " were requested.";
+        throw std::ios_base::failure(err_str);
+
+    } else {
+        DEBUG_PRINT( __func__ << " Able to read." );
+    }
+
+    auto copy_vec = std::vector< F >( first, last );
+
+    last_read_counter = 0;
+    //buffer_not_empty.notify_one();
+
+    return copy_vec;
 }
 
 template < typename T >
@@ -186,6 +226,7 @@ std::vector<T> ring_buffer<T>::HeadRead( uint read_size ) {
 
     auto first = internal_buffer.begin() + 0;
     auto last = internal_buffer.begin() + read_size;
+
     //Attempt to read more samples than are current stored in
     //the ring buffer
     bool check_condition = (std::distance(first, last) < read_size);
@@ -206,6 +247,43 @@ std::vector<T> ring_buffer<T>::HeadRead( uint read_size ) {
     }
 
     auto copy_vec = std::vector< T >( first, last );
+
+    last_read_counter = 0;
+    //buffer_not_empty.notify_one();
+
+    return copy_vec;
+}
+
+template < typename T >
+template < typename F >
+std::vector< F > ring_buffer<T>::HeadReadAndConvert ( uint read_size ) {
+
+    // get shared access
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
+
+    auto first = internal_buffer.begin() + 0;
+    auto last = internal_buffer.begin() + read_size;
+
+    //Attempt to read more samples than are current stored in
+    //the ring buffer
+    bool check_condition = (std::distance(first, last) < read_size);
+    //Attempt to read data that was read in last cycle ( eg. Old Data )
+    check_condition |= ( (uint)std::distance(first, last) > last_read_counter);
+
+    if (check_condition) {
+        DEBUG_PRINT( __func__ << " Unable to read, not enough samples in ring buffer" );
+
+        std::string err_str = "Not enough new data in ring buffer: Have ";
+        err_str += boost::lexical_cast<std::string>( last_read_counter);
+        err_str += " new data samples, but  ";
+        err_str += boost::lexical_cast<std::string>( read_size );
+        err_str += " were requested.";
+        throw std::ios_base::failure(err_str);
+    } else {
+        DEBUG_PRINT( __func__ << " Able to read." );
+    }
+
+    auto copy_vec = std::vector< F >( first, last );
 
     last_read_counter = 0;
     //buffer_not_empty.notify_one();

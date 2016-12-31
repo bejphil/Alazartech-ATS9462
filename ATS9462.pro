@@ -15,14 +15,18 @@ TEMPLATE = app
 
 CONFIG += c++11
 
+QMAKE_CFLAGS_RELEASE -= -O2
+QMAKE_CXXFLAGS_RELEASE -= -O2
+
+QMAKE_CFLAGS_RELEASE += -O3
+QMAKE_CXXFLAGS_RELEASE += -O3
+
 #DEFINES += "DEBUG"
 
 CONFIG(debug, debug|release) {
     DEFINES += "DEBUG"
 } else {
     DEFINES += "NDEBUG"
-    QMAKE_CXXFLAGS -= -O2
-    QMAKE_CXXFLAGS += -O3
 }
 
 INCLUDEPATH += ../../../include
