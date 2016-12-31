@@ -79,6 +79,7 @@ class ATS9462 {
     long int samples_per_acquisition = 0;
 
     uint samples_per_buffer = 204800*32;
+//    uint buffers_per_acquisition = 8;
 
     double integration_time = 0.0f;
     double sample_rate = 0.0f;

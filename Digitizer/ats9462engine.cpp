@@ -23,8 +23,9 @@ ATS9462Engine::~ATS9462Engine() {
         if ( thread.joinable() ) {
             try {
                 thread.join();
+                DEBUG_PRINT( "Worker thread re-joined main thread" );
             } catch (std::system_error &e) {
-                std::cout << "Thread joining failed!" << e.what() << std::endl;
+                DEBUG_PRINT( "Thread joining failed!" << e.what() );
             }
         }
     }
@@ -48,16 +49,6 @@ void ATS9462Engine::Stop() {
 
     signal_callback = static_cast< void (alazar::ATS9462::*)( unsigned long )>( &ATS9462Engine::CallBackWait );
 
-//    for ( auto& thread : worker_threads ) {
-//        if ( thread.joinable() ) {
-//            try {
-//                thread.join();
-//            } catch (std::system_error &e) {
-//                std::cout << "Thread joining failed!" << e.what() << std::endl;
-//            }
-//        }
-//    }
-
 //    current_signal = average_engine.ReturnValue();
 
 //    average_engine.Reset();
@@ -67,13 +58,12 @@ void ATS9462Engine::Stop() {
 
 void ATS9462Engine::CallBackWait( unsigned long signal_size ) {
 
-    DEBUG_PRINT( "ATS9462Engine::CallBackWait " << signal_size << " Samples read" );
+    DEBUG_PRINT( "ATS9462Engine::CallBackWait " );
 }
 
 void ATS9462Engine::CallBackUpdate( unsigned long signal_size ) {
 
     DEBUG_PRINT( "ATS9462Engine::CallBackUpdate" );
-
     DEBUG_PRINT( "ATS9462Engine::Current pending index " << pending_avg_index );
 
     if ( pending_avg_index >= number_averages ) {
@@ -110,10 +100,6 @@ struct VoltsTodBm_FFTCorrection {
         voltage = 10.0f * log10f(voltage / (50.0f * val));
     }
 };
-
-inline float Samples2VoltsFast( short unsigned int sample_value ) {
-    return 0.400f*( (sample_value - ( ( 1 << 15 ) - 0.5 ) ) / ( ( 1 << 15 ) - 0.5 )  );
-}
 
 inline float SamplesToVolts(short unsigned int sample_value) {
     // AlazarTech digitizers are calibrated as follows
@@ -153,9 +139,11 @@ void ATS9462Engine::UpdateAverage() {
     std::for_each( volts_data.begin(), volts_data.end(), VoltsTodBm_FFTCorrection(samples_f) );
 
     float time_correction = 1.0f / integration_time;
-    if( time_correction != 1.0f )
-        std::for_each(volts_data.begin(), volts_data.end(), std::bind1st (std::multiplies <float> () , time_correction) );
-
+    if( time_correction != 1.0f ) {
+        std::for_each(volts_data.begin(),\
+                      volts_data.end(),\
+                      std::bind1st (std::multiplies <float> (), time_correction) );
+    }
     average_engine( volts_data );
 }
 

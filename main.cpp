@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
 
 //  alazar::ATS9462 digitizer;
 
-    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 20e6, 10, 500e6 ) );
-    digitizer->SetSampleRate( 20e6 );
+    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 10e6, 10, 500e6 ) );
+    digitizer->SetSampleRate( 10e6 );
     digitizer->StartCapture();
 
     digitizer->Start();
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
     if ( digitizer->Finished() ) {
         auto signal = digitizer->FinishedSignal();
-        jaspl::plot( signal, 1604 );
+        jaspl::plot( signal );
     } else {
         std::cout << "Wasn't finished" << std::endl;
     }

@@ -332,8 +332,7 @@ void ATS9462::Prequel() {
 
     samples_per_buffer = static_cast<uint>( (samples_per_acquisition + samples_per_buffer - 1) / buffers_per_acquisition );
 
-    bytes_per_buffer = (uint)(bytes_per_sample * samples_per_buffer *
-                              channel_count + 0.5);
+    bytes_per_buffer = (uint)(bytes_per_sample * samples_per_buffer * channel_count + 0.5);
 
 //    buffers_per_acquisition = static_cast<uint>((samples_per_acquisition +
 //                              samples_per_buffer -
@@ -346,8 +345,8 @@ void ATS9462::Prequel() {
     buffer_array.clear();
 
     for (uint i = 0; i < buffers_per_acquisition; i ++) {
-        buffer_array.push_back(std::unique_ptr< short unsigned int>((
-                                   short unsigned int *)valloc(bytes_per_buffer)));
+//        buffer_array.push_back(std::unique_ptr< short unsigned int>((short unsigned int *)malloc(bytes_per_buffer)));
+        buffer_array.push_back(std::unique_ptr< short unsigned int>( new short unsigned int[ samples_per_buffer] ) );
     }
 
     uint adma_flags = ADMA_EXTERNAL_STARTCAPTURE | ADMA_CONTINUOUS_MODE;
@@ -394,19 +393,10 @@ void ATS9462::CaptureLoop() {
 
             DEBUG_PRINT( "Dumping critical buffer #" << i );
 
-//            monitor.lock();
-
-            err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 500); //500 = timeout in ms.
+            err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 5000); //500 = timeout in ms.
             ALAZAR_ASSERT(err);
 
-//            auto head = buffer_array[i].get();
-//            auto tail = head + samples_per_buffer;
-
-//            internal_buffer.insert( internal_buffer.end(), head, tail );
-
             internal_buffer.TailInsert( buffer_array[i].get(), samples_per_buffer );
-
-//            monitor.unlock();
 
             err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
             ALAZAR_ASSERT(err);

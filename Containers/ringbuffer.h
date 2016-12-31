@@ -22,7 +22,7 @@ namespace threadsafe {
 template < typename T >
 class ring_buffer {
 
-    typedef boost::mutex::scoped_lock lock;
+//    typedef boost::mutex::scoped_lock lock;
 
   public:
     ring_buffer();
@@ -45,7 +45,8 @@ class ring_buffer {
     void update_counter( uint insert_size );
 
     boost::circular_buffer<T> internal_buffer;
-    boost::mutex monitor;
+    boost::shared_mutex monitor;
+
     uint last_read_counter = 0;
 
 };
@@ -62,13 +63,13 @@ ring_buffer<T>::ring_buffer( uint buffer_size ) : internal_buffer( buffer_size )
 
 template < typename T >
 uint ring_buffer<T>::index() {
-    lock read_lock( monitor );
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
     return last_read_counter;
 }
 
 template < typename T >
 uint ring_buffer<T>::size() {
-    lock read_lock( monitor );
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
     return internal_buffer.size();
 }
 
@@ -77,7 +78,11 @@ void ring_buffer<T>::TailInsert( T* to_insert, uint insert_size ) {
 
     DEBUG_PRINT( "Inserting " << insert_size << " elements into ring buffer" );
 
-//    lock write_lock( monitor );
+    // get upgradable access
+    boost::upgrade_lock<boost::shared_mutex> lock( monitor );
+    // get exclusive access
+    boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
+
     auto head = to_insert;
     auto tail = head + insert_size;
 
@@ -89,7 +94,9 @@ void ring_buffer<T>::TailInsert( T* to_insert, uint insert_size ) {
 template < typename T >
 bool ring_buffer<T>::CheckHead( uint data_size ) {
 
-    lock read_lock(monitor);
+    // get shared access
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
+
     auto first = internal_buffer.begin();
     auto last = internal_buffer.begin() + data_size;
 
@@ -104,6 +111,7 @@ bool ring_buffer<T>::CheckHead( uint data_size ) {
     } else {
         DEBUG_PRINT( __func__ << " Able to read." );
     }
+    //buffer_not_empty.notify_one();
 
     return !check_condition;
 }
@@ -111,7 +119,9 @@ bool ring_buffer<T>::CheckHead( uint data_size ) {
 template < typename T >
 bool ring_buffer<T>::CheckTail( uint data_size ) {
 
-    lock read_lock(monitor);
+    // get shared access
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
+
     auto first = internal_buffer.end() - data_size;
     auto last = internal_buffer.end() ;
 
@@ -126,6 +136,7 @@ bool ring_buffer<T>::CheckTail( uint data_size ) {
     } else {
         DEBUG_PRINT( __func__ << " Able to read." );
     }
+    //buffer_not_empty.notify_one();
 
     return !check_condition;
 }
@@ -133,7 +144,8 @@ bool ring_buffer<T>::CheckTail( uint data_size ) {
 template < typename T >
 std::vector<T> ring_buffer<T>::TailRead( uint read_size ) {
 
-    lock read_lock( monitor );
+    // get shared access
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
 
     auto first = internal_buffer.end() - read_size;
     auto last = internal_buffer.end() ;
@@ -160,6 +172,7 @@ std::vector<T> ring_buffer<T>::TailRead( uint read_size ) {
     auto copy_vec = std::vector< T >( first, last );
 
     last_read_counter = 0;
+    //buffer_not_empty.notify_one();
 
     return copy_vec;
 
@@ -168,7 +181,8 @@ std::vector<T> ring_buffer<T>::TailRead( uint read_size ) {
 template < typename T >
 std::vector<T> ring_buffer<T>::HeadRead( uint read_size ) {
 
-    lock read_lock( monitor );
+    // get shared access
+    boost::shared_lock<boost::shared_mutex> lock( monitor );
 
     auto first = internal_buffer.begin() + 0;
     auto last = internal_buffer.begin() + read_size;
@@ -194,6 +208,7 @@ std::vector<T> ring_buffer<T>::HeadRead( uint read_size ) {
     auto copy_vec = std::vector< T >( first, last );
 
     last_read_counter = 0;
+    //buffer_not_empty.notify_one();
 
     return copy_vec;
 }
@@ -201,7 +216,6 @@ std::vector<T> ring_buffer<T>::HeadRead( uint read_size ) {
 template < typename T >
 void ring_buffer<T>::update_counter( uint insert_size ) {
 
-    lock write_lock( monitor );
     if ( insert_size > ( ULONG_MAX - last_read_counter ) ) {
         last_read_counter -= insert_size;
     } else {
