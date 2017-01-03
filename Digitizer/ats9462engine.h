@@ -8,7 +8,6 @@
 // AlazarTech Headers
 //
 // Boost Headers
-#include <boost/signals2.hpp>
 #include <boost/bind.hpp>
 // Qt Headers
 //
@@ -53,10 +52,11 @@ class ATS9462Engine : public alazar::ATS9462 {
     uint num_active_threads = 0;
     const uint thread_limit = 10; // Limits the number of threads that can be alive at any time
 
-    void clean_up();
-
     std::vector< std::thread > worker_threads;
+    std::vector< std::thread::id > complete_thread_ids;
+
     void ThreadCleanUp();
+    void FinalThreadCleanUp();
 
     void Rebin( std::vector < float >& to_bin );
 

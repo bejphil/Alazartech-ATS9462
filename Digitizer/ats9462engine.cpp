@@ -1,5 +1,6 @@
 #include "ats9462engine.h"
 #include <thread>
+#include <algorithm>
 
 ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_buffer_size) :\
     alazar::ATS9462( 1, 1, ring_buffer_size ),\
@@ -15,8 +16,9 @@ ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_
     DEBUG_PRINT( "Built new ATS9462Engine" );
 }
 
-void ATS9462Engine::ThreadCleanUp() {
+void ATS9462Engine::FinalThreadCleanUp() {
 
+    DEBUG_PRINT( __func__ )
     DEBUG_PRINT( "Cleaning up " << worker_threads.size() << " Worker Threads" );
 
     for ( auto& thread : worker_threads ) {
@@ -33,9 +35,42 @@ void ATS9462Engine::ThreadCleanUp() {
     worker_threads.clear();
 }
 
+void ATS9462Engine::ThreadCleanUp() {
+
+    DEBUG_PRINT( __func__ )
+    DEBUG_PRINT( "Cleaning up " << worker_threads.size() << " Worker Threads" );
+
+    auto iter = std::begin(worker_threads);
+
+    while ( iter != std::end(worker_threads)) {
+
+        auto thred = &(*iter);
+
+        auto find_iter = std::find( complete_thread_ids.begin(), complete_thread_ids.end(), thred->get_id() );
+
+        if ( find_iter != complete_thread_ids.end() ) {
+
+            DEBUG_PRINT( "Found Thread in completed threads lists" );
+
+            if ( thred->joinable() ) {
+                try {
+                    thred->join();
+                    DEBUG_PRINT( "Worker thread re-joined main thread" );
+                } catch (std::system_error &e) {
+                    DEBUG_PRINT( "Thread joining failed!" << e.what() );
+                }
+
+                iter = worker_threads.erase( iter );
+            }
+        } else {
+            ++ iter;
+        }
+    }
+}
+
 ATS9462Engine::~ATS9462Engine() {
 
-    ThreadCleanUp();
+    FinalThreadCleanUp();
     fft_er.TearDown();
     DEBUG_PRINT( "Destroyed ATS9462Engine" );
 }
@@ -84,7 +119,9 @@ void ATS9462Engine::CallBackUpdate( unsigned long signal_size ) {
         pending_avg_index ++;
         num_active_threads ++;
         DEBUG_PRINT( "Number of active threads: " << num_active_threads );
+        ThreadCleanUp();
         worker_threads.push_back( std::thread( &ATS9462Engine::UpdateAverage, this ) );
+
     }
 }
 
@@ -127,6 +164,14 @@ inline float Samples2Volts( const short unsigned int& sample_value) {
 
 void ATS9462Engine::UpdateAverage() {
 
+    if ( !internal_buffer.CheckTail( samples_per_average ) ) {
+        num_active_threads --;
+        pending_avg_index --;
+        complete_thread_ids.push_back( std::this_thread::get_id() );
+
+        return;
+    }
+
     auto volts_data = PullVoltageDataTail( samples_per_average );
     fft_er.PowerSpectrum( volts_data );
 
@@ -145,7 +190,10 @@ void ATS9462Engine::UpdateAverage() {
     }
 
     average_engine( volts_data );
+
     num_active_threads --;
+
+    complete_thread_ids.push_back( std::this_thread::get_id() );
 
 }
 
@@ -155,7 +203,7 @@ void ATS9462Engine::ThreadCallback( unsigned int num_threads ) {
 
     if( num_threads == 0 ) {
         DEBUG_PRINT( "Cleaning up..." );
-        ThreadCleanUp();
+        FinalThreadCleanUp();
     } else {
         DEBUG_PRINT( "Not all threads are finished." );
         return;

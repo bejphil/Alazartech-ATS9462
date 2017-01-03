@@ -375,7 +375,6 @@ void ATS9462::StartCapture() {
     DEBUG_PRINT( "Capture Started (Ring Buffer Thread Spinning)" );
 
     ring_buffer_thread = std::thread(&ATS9462::CaptureLoop, this);
-//    ring_buffer_thread.detach();
 
 }
 
@@ -388,12 +387,12 @@ void ATS9462::CaptureLoop() {
             DEBUG_PRINT( "Dumping critical buffer #" << i );
 
             err = AlazarWaitAsyncBufferComplete(board_handle, buffer_array[i].get(), 5000); //500 = timeout in ms.
-//            ALAZAR_ASSERT(err);
+            ALAZAR_ASSERT(err);
 
             internal_buffer.TailInsert( buffer_array[i].get(), samples_per_buffer );
 
             err = AlazarPostAsyncBuffer(board_handle, buffer_array[i].get(), bytes_per_buffer);
-//            ALAZAR_ASSERT(err);
+            ALAZAR_ASSERT(err);
 
         }
 
@@ -462,31 +461,12 @@ std::vector< float > ATS9462::PullVoltageDataHead( uint data_size ) {
     return copy_vec;
 }
 
-//std::vector<float> ATS9462::PullVoltageDataHead(uint data_size) {
-
-//    if (internal_buffer.size() <= data_size) {
-//        DEBUG_PRINT( __func__ << " Read Failed, not enough samples in ring buffer" );
-//        return std::vector < float >() = { 0.0f };
-
-//    }
-
-//    auto raw_data = PullRawDataHead(data_size);
-
-//    std::vector<float> converted_data(data_size, 0.0f);
-
-//    for (uint i = 0; i < raw_data.size() ; i ++) {
-//        converted_data[i] = SamplesToVolts(raw_data[i]);
-//    }
-
-//    return converted_data;
-//}
-
 std::vector<short unsigned int> ATS9462::PullRawDataTail( uint data_size ) {
 
-    if ( !internal_buffer.CheckTail(data_size) ) {
-        DEBUG_PRINT( __func__ << " Read Failed!" );
-        return std::vector<short unsigned int>() = { 0 };
-    }
+//    if ( !internal_buffer.CheckTail(data_size) ) {
+//        DEBUG_PRINT( __func__ << " Read Failed!" );
+//        return std::vector<short unsigned int>() = { 0 };
+//    }
 
     auto copy_vec = internal_buffer.TailRead( data_size );
     DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );
@@ -497,10 +477,10 @@ std::vector<short unsigned int> ATS9462::PullRawDataTail( uint data_size ) {
 
 std::vector< float > ATS9462::PullVoltageDataTail( uint data_size ) {
 
-    if ( !internal_buffer.CheckTail(data_size) ) {
-        DEBUG_PRINT( __func__ << " Read Failed!" );
-        return std::vector< float >() = { 0 };
-    }
+//    if ( !internal_buffer.CheckTail(data_size) ) {
+//        DEBUG_PRINT( __func__ << " Read Failed!" );
+//        return std::vector< float >() = { 0 };
+//    }
 
     auto copy_vec = internal_buffer.TailReadAndConvert< float >( data_size );
     DEBUG_PRINT( "Read " << copy_vec.size() << " samples from head of ring buffer." );

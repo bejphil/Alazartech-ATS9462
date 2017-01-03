@@ -98,8 +98,12 @@ void ring_buffer<T>::TailInsert( T* to_insert, uint insert_size ) {
 template < typename T >
 bool ring_buffer<T>::CheckHead( uint data_size ) {
 
-    // get shared access
-    boost::shared_lock<boost::shared_mutex> lock( monitor );
+//    // get shared access
+//    boost::shared_lock<boost::shared_mutex> lock( monitor );
+    // get upgradable access
+    boost::upgrade_lock<boost::shared_mutex> lock( monitor );
+    // get exclusive access
+    boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
 
     auto first = internal_buffer.begin();
     auto last = internal_buffer.begin() + data_size;
@@ -123,8 +127,12 @@ bool ring_buffer<T>::CheckHead( uint data_size ) {
 template < typename T >
 bool ring_buffer<T>::CheckTail( uint data_size ) {
 
-    // get shared access
-    boost::shared_lock<boost::shared_mutex> lock( monitor );
+//    // get shared access
+//    boost::shared_lock<boost::shared_mutex> lock( monitor );
+    // get upgradable access
+    boost::upgrade_lock<boost::shared_mutex> lock( monitor );
+    // get exclusive access
+    boost::upgrade_to_unique_lock<boost::shared_mutex> uniqueLock(lock);
 
     auto first = internal_buffer.end() - data_size;
     auto last = internal_buffer.end() ;
