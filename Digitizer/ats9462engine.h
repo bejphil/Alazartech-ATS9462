@@ -4,7 +4,10 @@
 // C System-Headers
 //
 // C++ System headers
-//
+#include <future>
+#include <thread>
+#include <algorithm>
+#include <functional>
 // AlazarTech Headers
 //
 // Boost Headers
@@ -35,7 +38,7 @@ class ATS9462Engine : public alazar::ATS9462 {
 
     void CallBackUpdate( unsigned long signal_size );
     void CallBackWait( unsigned long signal_size );
-    void ThreadCallback( unsigned int num_threads );
+    void ThreadCallback();
 
   private:
 
@@ -52,11 +55,9 @@ class ATS9462Engine : public alazar::ATS9462 {
     uint num_active_threads = 0;
     const uint thread_limit = 10; // Limits the number of threads that can be alive at any time
 
-    std::vector< std::thread > worker_threads;
-    std::vector< std::thread::id > complete_thread_ids;
+    std::vector< std::future<void> > results;
 
-    void ThreadCleanUp();
-    void FinalThreadCleanUp();
+    void FuturesCleanUp();
 
     void Rebin( std::vector < float >& to_bin );
 

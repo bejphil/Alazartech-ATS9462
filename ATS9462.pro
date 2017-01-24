@@ -66,7 +66,8 @@ SOURCES += main.cpp\
     jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.cpp \
     jSpectrumAnalyzer/GraphicObjects/frequencycontrols.cpp \
     jSpectrumAnalyzer/GraphicObjects/rightclickmenu.cpp \
-    Digitizer/ats9462engine.cpp
+    Digitizer/ats9462engine.cpp \
+    Digitizer/workerthread.cpp
 
 HEADERS  += mainwindow.h \
     Digitizer/ats9462.h \
@@ -77,7 +78,8 @@ HEADERS  += mainwindow.h \
     jSpectrumAnalyzer/GraphicObjects/frequencycontrols.h \
     jSpectrumAnalyzer/GraphicObjects/rightclickmenu.h \
     Digitizer/ats9462engine.h \
-    Containers/ringbuffer.h
+    Containers/ringbuffer.h \
+    Digitizer/workerthread.h
 
 FORMS    += mainwindow.ui \
     jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.ui \

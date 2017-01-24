@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
 
 //  alazar::ATS9462 digitizer;
 
-    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 180e6, 20, 500e6 ) );
-    digitizer->SetSampleRate( 180e6 );
+    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 50e6, 200, 500e6 ) );
+    digitizer->SetSampleRate( 50e6 );
     digitizer->StartCapture();
 
     digitizer->Start();

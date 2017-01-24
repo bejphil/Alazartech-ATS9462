@@ -318,19 +318,28 @@ void ATS9462::Prequel() {
 
     float bytes_per_sample = (float)((bits_per_sample + 7) / 8);
 
-    // Calculate the number of buffers in the acquisition
+    // Calculate the number of samples in each buffer
 
-    samples_per_acquisition = static_cast<long int>
-                              (sample_rate * integration_time +
-                               0.5);
+//    samples_per_acquisition = static_cast<long int>
+//                              (sample_rate * integration_time +
+//                               0.5);
+
+    long int est_samples_per_acq = static_cast<long int> (sample_rate * integration_time + 0.5);
+
+    samples_per_buffer = static_cast<uint>( (est_samples_per_acq + samples_per_buffer) / buffers_per_acquisition );
+
+    //Number of elements of buffer must be multiple of 64 since we are using page-aligned memory
+    samples_per_buffer -= samples_per_buffer%64;
 
 //    samples_per_buffer = static_cast<uint>( (samples_per_acquisition + samples_per_buffer - 1) / buffers_per_acquisition );
 
-    bytes_per_buffer = (uint)(bytes_per_sample * samples_per_buffer * channel_count + 0.5);
+    bytes_per_buffer = static_cast<uint>(bytes_per_sample * samples_per_buffer * channel_count + 0.5);
 
-    buffers_per_acquisition = static_cast<uint>((samples_per_acquisition +
-                              samples_per_buffer -
-                              1) / samples_per_buffer);
+    samples_per_acquisition = samples_per_buffer*buffers_per_acquisition;
+
+//    buffers_per_acquisition = static_cast<uint>((samples_per_acquisition +
+//                              samples_per_buffer -
+//                              1) / samples_per_buffer);
 
     DEBUG_PRINT( "Getting " << samples_per_acquisition << " total samples per acquisition." );
     DEBUG_PRINT( "Using " << samples_per_buffer << " samples per buffer." );
@@ -490,20 +499,6 @@ std::vector< float > ATS9462::PullVoltageDataTail( uint data_size ) {
     return copy_vec;
 }
 
-//std::vector<float> ATS9462::PullVoltageDataTail(uint data_size) {
-
-//    auto raw_data = PullRawDataTail( data_size );
-
-//    std::vector<float> converted_data;
-//    converted_data.reserve( data_size );
-
-//    for (uint i = 0; i < raw_data.size() ; i ++) {
-//        converted_data.push_back( Samples2Volts( raw_data[i] ) );
-////        converted_data[i] = SamplesToVolts(raw_data[i]);
-//    }
-
-//    return converted_data;
-//}
 
 void ATS9462::AbortCapture() {
 
