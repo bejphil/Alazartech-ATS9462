@@ -23,6 +23,7 @@
 // Project Specific Headers
 #include "debug.h"
 #include "../Containers/ringbuffer.h"
+#include "../JASPL/Containers/ouroboros.h"
 
 namespace alazar {
 
@@ -34,16 +35,13 @@ class ATS9462 {
 
   public:
 
-    typedef std::lock_guard<std::mutex> lock;
+    typedef std::lock_guard< std::mutex > lock;
 
     ATS9462(uint system_id = 1, uint board_id = 1, uint ring_buffer_size = 1e8 );
     ~ATS9462();
 
     //Non-wrapper functions
-//    virtual void SetupRingBuffer( uint buffer_size );
 
-//    virtual bool CheckHead( uint data_size );
-//    virtual bool CheckTail( uint data_size );
     virtual std::vector<short unsigned int> PullRawDataHead(uint data_size);
     virtual std::vector<float> PullVoltageDataHead(uint data_size);
 
@@ -79,11 +77,7 @@ class ATS9462 {
     const uint byte_alignment = 64;
 
     uint bytes_per_buffer = 0;
-//    const uint buffers_per_acquisition = 8;
-
     long int samples_per_acquisition = 0;
-
-//    const uint samples_per_buffer = 204800 * 64;
     uint samples_per_buffer = 204800;
     const uint buffers_per_acquisition = 8;
 
@@ -92,30 +86,27 @@ class ATS9462 {
 
     virtual void Prequel();
     virtual void CaptureLoop();
-    virtual void SignalCallback( unsigned long signal_size ) {
-        DEBUG_PRINT( "alazar::ATS9462::SignalCallBack " << signal_size );
+    virtual void SignalCallback() {
+        DEBUG_PRINT( "alazar::ATS9462::SignalCallBack " );
     }
 
-    void (ATS9462::*signal_callback)( unsigned long ) = NULL;
+    void (ATS9462::*signal_callback)() = NULL;
 
-    threadsafe::ring_buffer< short unsigned int > internal_buffer;
+//    threadsafe::ring_buffer< short unsigned int > internal_buffer;
+    jaspl::ouroborus< short unsigned int > internal_buffer;
 
   private:
-
     std::vector< std::unique_ptr< short unsigned int > > buffer_array;
-//    boost::circular_buffer<short unsigned int> internal_buffer;
 
     HANDLE board_handle = NULL;
     RETURN_CODE err;
 
     uint channel_mask;
     uint channel_count = 0;
-    long unsigned int samples_since_last_read = 0;
 
     bool capture_switch = false;
 
     std::thread ring_buffer_thread;
-//    std::mutex monitor;
 
 };
 

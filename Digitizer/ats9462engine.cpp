@@ -2,9 +2,9 @@
 
 ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_buffer_size) :\
     alazar::ATS9462( 1, 1, ring_buffer_size ),\
-    average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
-    number_averages( num_averages),\
+    number_averages( num_averages ),\
     samples_per_average( signal_samples ), \
+    average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
     fft_er( true ) \
 {
 
@@ -19,7 +19,6 @@ bool thread_is_finished( std::future<T>& to_check ) {
     // Use wait_for() with zero milliseconds to check thread status.
     auto status = to_check.wait_for(std::chrono::milliseconds(0));
 
-    // Print status.
     if (status == std::future_status::ready) {
         DEBUG_PRINT( "Thread finished" );
         return true;
@@ -62,7 +61,7 @@ void ATS9462Engine::Start() {
     pending_avg_index = 0;
     average_engine.Reset();
 
-    signal_callback = static_cast< void (alazar::ATS9462::*)( unsigned long )>( &ATS9462Engine::CallBackUpdate );
+    signal_callback = static_cast< void (alazar::ATS9462::*)()>( &ATS9462Engine::CallBackUpdate );
 
 }
 
@@ -70,19 +69,18 @@ void ATS9462Engine::Stop() {
 
     DEBUG_PRINT( "ATS9462Engine: Averaging finished, stopping...");
 
-    signal_callback = static_cast< void (alazar::ATS9462::*)( unsigned long )>( &ATS9462Engine::CallBackWait );
+    signal_callback = static_cast< void (alazar::ATS9462::*)()>( &ATS9462Engine::CallBackWait );
     ready_flag = true;
 
 }
 
-void ATS9462Engine::CallBackWait( unsigned long signal_size ) {
+void ATS9462Engine::CallBackWait() {
 
-    (void)signal_size;
     DEBUG_PRINT( "ATS9462Engine::CallBackWait " );
     ThreadCallback();
 }
 
-void ATS9462Engine::CallBackUpdate( unsigned long signal_size ) {
+void ATS9462Engine::CallBackUpdate() {
 
     DEBUG_PRINT( "ATS9462Engine::CallBackUpdate" );
     DEBUG_PRINT( "ATS9462Engine::Current pending index " << pending_avg_index );
@@ -94,7 +92,7 @@ void ATS9462Engine::CallBackUpdate( unsigned long signal_size ) {
         FuturesCleanUp();
     }
 
-    bool check_criteria = ( signal_size >= samples_per_average ); //Are there enough samples in the ring buffer (probably)?
+    bool check_criteria = ( internal_buffer.size() >= samples_per_average ); //Are there enough samples in the ring buffer (probably)?
     check_criteria &= ( results.size() <= thread_limit );//Are there too many active threads?
     check_criteria &= internal_buffer.CheckTail( samples_per_average );//Explicitly check if there are enough samples to read
 
@@ -107,9 +105,16 @@ void ATS9462Engine::CallBackUpdate( unsigned long signal_size ) {
     }
 }
 
-void VoltsTodBm(float &voltage) {
-    voltage = 20.0f * log10f(voltage / 50.0f);
+float volts_to_dbm( float voltage ) {
+    return 20.0f * log10f( voltage / 50.0f );
 }
+
+struct VoltsTodBm {
+
+    void operator()(float &voltage) const {
+        voltage = volts_to_dbm( voltage );
+    }
+};
 
 //Combination of operations designed to compensate for
 //1/N term introduce in FFT, and then convert from volts
@@ -154,19 +159,17 @@ void ATS9462Engine::UpdateAverage() {
     auto volts_data = PullVoltageDataTail( samples_per_average );
     fft_er.PowerSpectrum( volts_data );
 
-    float samples_f = static_cast<float>( samples_per_average );
-
     //Remove negative part of FFT
     volts_data.erase( volts_data.end() - samples_half , volts_data.end() );
 
-    std::for_each( volts_data.begin(), volts_data.end(), VoltsTodBm_FFTCorrection(samples_f) );
+    float correction_term = 1.0/( 0.5 );
 
-    float time_correction = 1.0f / integration_time;
-    if( time_correction != 1.0f ) {
-        std::for_each(volts_data.begin(),\
-                      volts_data.end(),\
-                      std::bind1st (std::multiplies <float> (), time_correction) );
-    }
+    std::transform(volts_data.begin(),\
+                   volts_data.end(),\
+                   volts_data.begin(),
+                   std::bind1st(std::multiplies<float>(), correction_term));
+
+    std::for_each( volts_data.begin(), volts_data.end(), VoltsTodBm() );
 
     average_engine( volts_data );
 

@@ -36,8 +36,8 @@ class ATS9462Engine : public alazar::ATS9462 {
     uint number_averages;
     uint samples_per_average;
 
-    void CallBackUpdate( unsigned long signal_size );
-    void CallBackWait( unsigned long signal_size );
+    void CallBackUpdate();
+    void CallBackWait();
     void ThreadCallback();
 
   private:
