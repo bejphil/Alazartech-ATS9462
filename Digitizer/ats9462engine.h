@@ -30,6 +30,8 @@ class ATS9462Engine : public alazar::ATS9462 {
     void Start();
     void Stop();
     bool Finished();
+
+    void ThreadPoolSize( uint num_threads );
     std::vector < float > FinishedSignal();
 
   protected:
@@ -53,7 +55,8 @@ class ATS9462Engine : public alazar::ATS9462 {
     bool ready_flag = false;
     uint pending_avg_index = 0;
     uint num_active_threads = 0;
-    const uint thread_limit = 10; // Limits the number of threads that can be alive at any time
+
+    uint thread_limit = 10; // Limits the number of threads that can be alive at any time
 
     std::vector< std::future<void> > results;
 

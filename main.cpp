@@ -40,10 +40,11 @@ int main(int argc, char *argv[]) {
 
 //    return a.exec();
 
-//  alazar::ATS9462 digitizer;
+    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 50e6, 50, 500e6 ) );
 
-    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 180e6, 5, 500e6 ) );
-    digitizer->SetSampleRate( 180e6 );
+    digitizer->ThreadPoolSize( 50 );
+    digitizer->SetSampleRate( 50e6 );
+
     digitizer->StartCapture();
 
     digitizer->Start();
@@ -57,4 +58,6 @@ int main(int argc, char *argv[]) {
     jaspl::plot( signal, "2 Signals Averaged", 1e5 );
 
     digitizer->Stop();
+
+    digitizer->AbortCapture();
 }

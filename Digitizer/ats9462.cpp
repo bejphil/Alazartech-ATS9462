@@ -344,8 +344,6 @@ void ATS9462::Prequel() {
     DEBUG_PRINT( "Using " << samples_per_buffer << " samples per buffer." );
     DEBUG_PRINT( "Using " << buffers_per_acquisition << " individual buffers." );
 
-    buffer_array.clear();
-
     for (uint i = 0; i < buffers_per_acquisition; i ++) {
 //        buffer_array.push_back(std::unique_ptr< short unsigned int>((short unsigned int *)malloc(bytes_per_buffer)));
         buffer_array.push_back(std::unique_ptr< short unsigned int>( (short unsigned int*)aligned_alloc( byte_alignment, bytes_per_buffer ) ) );
@@ -362,7 +360,7 @@ void ATS9462::Prequel() {
                                 adma_flags);
     ALAZAR_ASSERT(err);
 
-    for (auto &buffer : buffer_array) {
+    for ( auto &buffer : buffer_array ) {
         err = AlazarPostAsyncBuffer(board_handle, buffer.get(), bytes_per_buffer);
         ALAZAR_ASSERT(err);
     }

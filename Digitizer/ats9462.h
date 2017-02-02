@@ -17,9 +17,7 @@
 #include "AlazarApi.h"
 #include "AlazarCmd.h"
 // Boost Headers
-#include "boost/circular_buffer.hpp"
-#include <boost/lockfree/spsc_queue.hpp>
-
+//
 // Project Specific Headers
 #include "debug.h"
 #include "../Containers/ringbuffer.h"
@@ -49,6 +47,7 @@ class ATS9462 {
     virtual std::vector<float> PullVoltageDataTail(uint data_size);
 
     virtual void SetDefaultConfig();
+    virtual void InitializeForCapture();
 
     void SelectChannel(Channel selection);
 
@@ -92,7 +91,6 @@ class ATS9462 {
 
     void (ATS9462::*signal_callback)() = NULL;
 
-//    threadsafe::ring_buffer< short unsigned int > internal_buffer;
     jaspl::ouroborus< short unsigned int > internal_buffer;
 
   private:

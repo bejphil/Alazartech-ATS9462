@@ -14,6 +14,11 @@ ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_
     DEBUG_PRINT( "Built new ATS9462Engine" );
 }
 
+void ATS9462Engine::ThreadPoolSize( uint num_threads ) {
+
+    thread_limit = ( num_threads > 0 )?num_threads:1;
+}
+
 template <typename T>
 bool thread_is_finished( std::future<T>& to_check ) {
     // Use wait_for() with zero milliseconds to check thread status.
@@ -80,6 +85,12 @@ void ATS9462Engine::CallBackWait() {
     ThreadCallback();
 }
 
+void ATS9462Engine::ThreadCallback() {
+
+    FuturesCleanUp();
+
+}
+
 void ATS9462Engine::CallBackUpdate() {
 
     DEBUG_PRINT( "ATS9462Engine::CallBackUpdate" );
@@ -106,7 +117,7 @@ void ATS9462Engine::CallBackUpdate() {
 }
 
 float volts_to_dbm( float voltage ) {
-    return 20.0f * log10f( voltage / 50.0f );
+    return 20.0f * log10f( voltage / 50.0f ) - 30;
 }
 
 struct VoltsTodBm {
@@ -176,16 +187,23 @@ void ATS9462Engine::UpdateAverage() {
     DEBUG_PRINT( "Thread finished" );
 }
 
-void ATS9462Engine::ThreadCallback() {
-
-    FuturesCleanUp();
-
-}
-
 bool ATS9462Engine::Finished() {
     return( static_cast<uint>( average_engine.Index() >= number_averages ) );
 }
 
 std::vector < float > ATS9462Engine::FinishedSignal() {
+
+    if( !Finished() ) {
+
+        DEBUG_PRINT( __func__ << " Tried to read signal before data collection was complete!" );
+
+        std::string err_str = "Have approximately ";
+        err_str += boost::lexical_cast<std::string>( average_engine.Index() );
+        err_str += " averaged spectra, out of the  ";
+        err_str += boost::lexical_cast<std::string>( number_averages );
+        err_str += " requested.";
+        throw std::ios_base::failure(err_str);
+    }
+
     return average_engine.ReturnValue();
 }
