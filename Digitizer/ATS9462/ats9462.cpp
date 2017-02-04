@@ -11,8 +11,6 @@
 // Project Specific Headers
 #include "ats9462.h"
 
-namespace alazar {
-
 ATS9462::ATS9462( uint system_id, uint board_id, uint ring_buffer_size ) : internal_buffer( ring_buffer_size ) {
 
     board_handle = AlazarGetBoardBySystemID(system_id, board_id);
@@ -30,7 +28,7 @@ ATS9462::ATS9462( uint system_id, uint board_id, uint ring_buffer_size ) : inter
 
     SetDefaultConfig();
 
-    signal_callback = &alazar::ATS9462::SignalCallback;
+    signal_callback = &ATS9462::SignalCallback;
 
     DEBUG_PRINT( "Built new ATS9462" );
 
@@ -518,6 +516,4 @@ void ATS9462::AbortCapture() {
 
     err = AlazarAbortAsyncRead(board_handle);
     ALAZAR_ASSERT(err);
-}
-
 }

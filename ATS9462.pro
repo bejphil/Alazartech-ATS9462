@@ -29,58 +29,71 @@ CONFIG(debug, debug|release) {
     DEFINES += "NDEBUG"
 }
 
+INCLUDEPATH += /usr/include/python3.4m
+
+LIBS += -L/usr/lib/python3.4/config-3.4m-x86_64-linux-gnu \
+        -lpython3.4m \
+        -lpthread \
+        -ldl \
+        -lutil \
+        -lm
+
 INCLUDEPATH += ../../../include
 LIBS += -L$$OUT_PWD/../../../lib
 
 LIBS += -L/usr/local/lib \
         -L/usr/lib \
         -lboost_iostreams \
+        -lboost_python-py34 \
         -lboost_system \
         -lboost_filesystem \
-        -lboost_system \
         -lboost_thread \
         -pthread
 
 INCLUDEPATH +=/opt/AMDAPPSDK-3.0/include/
 LIBS +=-L/opt/AMDAPPSDK-3.0/lib/x86_64/sdk/ -lOpenCL
 
-INCLUDEPATH +=/usr/local/include
-LIBS +=-L/usr/local/lib64 -lclFFT
+INCLUDEPATH += /usr/local/include
+LIBS += -L/usr/local/lib64 -lclFFT
 
-LIBS +=-lfftw3_threads -lfftw3 -lm
+LIBS += -lfftw3_threads -lfftw3 -lm
 
 LIBS += -lATSApi -L/usr/local/AlazarTech/lib
 
-QMAKE_CXXFLAGS+= -fopenmp
+QMAKE_CXXFLAGS += -fopenmp
 QMAKE_LFLAGS +=  -fopenmp
 
 QMAKE_CXXFLAGS = -Wno-deprecated-declarations
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    Digitizer/ats9462.cpp \
-    Digitizer/debug.cpp \
+    Digitizer/ATS9462/ats9462.cpp \
+    Debug/debug.cpp \
     Digitizer/qts9462.cpp \
     jSpectrumAnalyzer/jspectrumanalyzer.cpp \
     jSpectrumAnalyzer/jspectrumanalyzer.tpp \
     jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.cpp \
     jSpectrumAnalyzer/GraphicObjects/frequencycontrols.cpp \
     jSpectrumAnalyzer/GraphicObjects/rightclickmenu.cpp \
-    Digitizer/ats9462engine.cpp \
-    Digitizer/workerthread.cpp
+    Digitizer/ATS9462Engine/ats9462engine.cpp \
+    Digitizer/ATS9462Engine/ats9462engine_python_wrapper.cpp
 
 HEADERS  += mainwindow.h \
-    Digitizer/ats9462.h \
-    Digitizer/debug.h \
+    Digitizer/ATS9462/ats9462.h \
+    Debug/debug.h \
     Digitizer/qts9462.h \
     jSpectrumAnalyzer/jspectrumanalyzer.h \
     jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.h \
     jSpectrumAnalyzer/GraphicObjects/frequencycontrols.h \
     jSpectrumAnalyzer/GraphicObjects/rightclickmenu.h \
-    Digitizer/ats9462engine.h \
-    Containers/ringbuffer.h \
-    Digitizer/workerthread.h
+    Digitizer/ATS9462Engine/ats9462engine.h \
+    Containers/ringbuffer.h
 
 FORMS    += mainwindow.ui \
     jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.ui \
     jSpectrumAnalyzer/GraphicObjects/frequencycontrols.ui
+
+DISTFILES += \
+    Digitizer/ATS9462Engine/swigify.sh \
+    Digitizer/ATS9462Engine/ats9462engine_wrapper.i
+

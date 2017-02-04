@@ -16,8 +16,8 @@
 //Project specific headers
 #include "jSpectrumAnalyzer/jspectrumanalyzer.h"
 #include "../JASPL/jPlot/jplot.h"
-#include "Digitizer/ats9462.h"
-#include "Digitizer/ats9462engine.h"
+#include "Digitizer/ATS9462/ats9462.h"
+#include "Digitizer/ATS9462Engine/ats9462engine.h"
 
 /*! \mainpage Alazartech ATS9462 Digitier
  *
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
 //    return a.exec();
 
-    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 50e6, 50, 500e6 ) );
+    auto digitizer = std::unique_ptr< ATS9462Engine >( new ATS9462Engine( 50e6, 5, 500e6 ) );
 
     digitizer->ThreadPoolSize( 50 );
     digitizer->SetSampleRate( 50e6 );

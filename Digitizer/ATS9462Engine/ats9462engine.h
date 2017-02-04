@@ -15,11 +15,11 @@
 // Qt Headers
 //
 // Project Specific Headers
-#include "ats9462.h"
-#include "../JASPL/jAlgorithm/jalgorithm.h"
-#include "../JASPL/jFFT/jfft.h"
+#include "../ATS9462/ats9462.h"
+#include "../../../JASPL/jAlgorithm/jalgorithm.h"
+#include "../../../JASPL/jFFT/jfft.h"
 
-class ATS9462Engine : public alazar::ATS9462 {
+class ATS9462Engine : public ATS9462 {
 
     typedef std::lock_guard<std::mutex> lock;
 
@@ -62,9 +62,6 @@ class ATS9462Engine : public alazar::ATS9462 {
 
     void FuturesCleanUp();
 
-    void Rebin( std::vector < float >& to_bin );
-
-//    std::mutex read_monitor;
 };
 
 #endif // ATS9462ENGINE_H

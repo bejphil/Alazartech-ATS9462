@@ -1,7 +1,7 @@
 #include "ats9462engine.h"
 
 ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_buffer_size) :\
-    alazar::ATS9462( 1, 1, ring_buffer_size ),\
+    ATS9462( 1, 1, ring_buffer_size ),\
     number_averages( num_averages ),\
     samples_per_average( signal_samples ), \
     average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
@@ -66,7 +66,7 @@ void ATS9462Engine::Start() {
     pending_avg_index = 0;
     average_engine.Reset();
 
-    signal_callback = static_cast< void (alazar::ATS9462::*)()>( &ATS9462Engine::CallBackUpdate );
+    signal_callback = static_cast< void (ATS9462::*)()>( &ATS9462Engine::CallBackUpdate );
 
 }
 
@@ -74,7 +74,7 @@ void ATS9462Engine::Stop() {
 
     DEBUG_PRINT( "ATS9462Engine: Averaging finished, stopping...");
 
-    signal_callback = static_cast< void (alazar::ATS9462::*)()>( &ATS9462Engine::CallBackWait );
+    signal_callback = static_cast< void (ATS9462::*)()>( &ATS9462Engine::CallBackWait );
     ready_flag = true;
 
 }
@@ -142,23 +142,23 @@ struct VoltsTodBm_FFTCorrection {
     }
 };
 
-inline float SamplesToVolts(short unsigned int sample_value) {
-    // AlazarTech digitizers are calibrated as follows
-    int bitsPerSample = 16;
-    float codeZero = (1 << (bitsPerSample - 1)) - 0.5;
-    float codeRange = (1 << (bitsPerSample - 1)) - 0.5;
+//inline float SamplesToVolts(short unsigned int sample_value) {
+//    // AlazarTech digitizers are calibrated as follows
+//    int bitsPerSample = 16;
+//    float codeZero = (1 << (bitsPerSample - 1)) - 0.5;
+//    float codeRange = (1 << (bitsPerSample - 1)) - 0.5;
 
-    float inputRange_volts = 0.400f;
+//    float inputRange_volts = 0.400f;
 
-    // Convert sample code to volts
-    return inputRange_volts * ((sample_value - codeZero) / codeRange);
-}
+//    // Convert sample code to volts
+//    return inputRange_volts * ((sample_value - codeZero) / codeRange);
+//}
 
-inline float Samples2Volts( const short unsigned int& sample_value) {
+//inline float Samples2Volts( const short unsigned int& sample_value) {
 
-    float code = (1 << (15)) - 0.5;
-    return 0.400f * ((sample_value - code) / code);
-}
+//    float code = (1 << (15)) - 0.5;
+//    return 0.400f * ((sample_value - code) / code);
+//}
 
 void ATS9462Engine::UpdateAverage() {
 

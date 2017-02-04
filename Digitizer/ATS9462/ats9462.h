@@ -19,11 +19,8 @@
 // Boost Headers
 //
 // Project Specific Headers
-#include "debug.h"
-#include "../Containers/ringbuffer.h"
-#include "../JASPL/Containers/ouroboros.h"
-
-namespace alazar {
+#include "../../Debug/debug.h"
+#include "../../../JASPL/Containers/ouroboros.h"
 
 class ATS9462 {
 
@@ -47,7 +44,6 @@ class ATS9462 {
     virtual std::vector<float> PullVoltageDataTail(uint data_size);
 
     virtual void SetDefaultConfig();
-    virtual void InitializeForCapture();
 
     void SelectChannel(Channel selection);
 
@@ -107,7 +103,5 @@ class ATS9462 {
     std::thread ring_buffer_thread;
 
 };
-
-}
 
 #endif // ATS9462_H

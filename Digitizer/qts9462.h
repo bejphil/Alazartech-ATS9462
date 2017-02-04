@@ -13,9 +13,9 @@
 #include <QObject>
 #include <QTimer>
 // Project Specific Headers
-#include "ats9462.h"
+#include "ATS9462/ats9462.h"
 
-class QTS9462 : public QObject, public alazar::ATS9462 {
+class QTS9462 : public QObject, public ATS9462 {
 
   Q_OBJECT
 
