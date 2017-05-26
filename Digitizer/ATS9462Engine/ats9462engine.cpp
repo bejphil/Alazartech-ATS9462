@@ -5,8 +5,7 @@ ATS9462Engine::ATS9462Engine(uint signal_samples, uint num_averages , uint ring_
     number_averages( num_averages ),\
     samples_per_average( signal_samples ), \
     average_engine ( (signal_samples % 2 == 0) ? (signal_samples / 2) : (( signal_samples - 1) / 2) ),\
-    fft_er( true ) \
-{
+    fft_er( true ) \ {
 
     samples_half = (samples_per_average % 2 == 0) ? (samples_per_average / 2) : (( samples_per_average - 1) / 2);
     fft_er.SetUp( signal_samples );
@@ -24,7 +23,7 @@ bool thread_is_finished( std::future<T>& to_check ) {
     // Use wait_for() with zero milliseconds to check thread status.
     auto status = to_check.wait_for(std::chrono::milliseconds(0));
 
-    if (status == std::future_status::ready) {
+    if ( status == std::future_status::ready ) {
         DEBUG_PRINT( "Thread finished" );
         return true;
     } else {
@@ -62,7 +61,6 @@ ATS9462Engine::~ATS9462Engine() {
 
 void ATS9462Engine::Start() {
 
-    ready_flag = false;
     pending_avg_index = 0;
     average_engine.Reset();
 
@@ -75,7 +73,6 @@ void ATS9462Engine::Stop() {
     DEBUG_PRINT( "ATS9462Engine: Averaging finished, stopping...");
 
     signal_callback = static_cast< void (ATS9462::*)()>( &ATS9462Engine::CallBackWait );
-    ready_flag = true;
 
 }
 
@@ -110,8 +107,8 @@ void ATS9462Engine::CallBackUpdate() {
     //If all checks are good, make a new thread and increment counters
     if ( check_criteria ) {
         pending_avg_index ++;
-        DEBUG_PRINT( "Number of active threads: " << results.size() );
 
+        DEBUG_PRINT( "Number of active threads: " << results.size() );
         results.push_back( std::async( std::launch::async, &ATS9462Engine::UpdateAverage, this ) );
     }
 }
@@ -173,7 +170,7 @@ void ATS9462Engine::UpdateAverage() {
     //Remove negative part of FFT
     volts_data.erase( volts_data.end() - samples_half , volts_data.end() );
 
-    float correction_term = 1.0/( 0.5 );
+    float correction_term = 1.0f/( 0.5f );
 
     std::transform(volts_data.begin(),\
                    volts_data.end(),\

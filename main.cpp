@@ -14,7 +14,6 @@
 #include <QApplication>
 #include <QThread>
 //Project specific headers
-#include "jSpectrumAnalyzer/jspectrumanalyzer.h"
 #include "../JASPL/jPlot/jplot.h"
 #include "Digitizer/ATS9462/ats9462.h"
 #include "Digitizer/ATS9462Engine/ats9462engine.h"
@@ -58,6 +57,6 @@ int main(int argc, char *argv[]) {
     jaspl::plot( signal, "2 Signals Averaged", 1e5 );
 
     digitizer->Stop();
-
     digitizer->AbortCapture();
+
 }

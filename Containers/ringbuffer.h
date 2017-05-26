@@ -15,7 +15,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 // Project Specific Headers
-#include "../Digitizer/debug.h"
+#include "../Debug/debug.h"
 
 namespace threadsafe {
 

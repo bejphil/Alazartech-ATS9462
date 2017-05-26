@@ -15,28 +15,14 @@ TEMPLATE = app
 
 CONFIG += c++11
 
-QMAKE_CFLAGS_RELEASE -= -O2
-QMAKE_CXXFLAGS_RELEASE -= -O2
-
-QMAKE_CFLAGS_RELEASE += -O3
-QMAKE_CXXFLAGS_RELEASE += -O3
-
-DEFINES += "DEBUG"
-
 CONFIG(debug, debug|release) {
     DEFINES += "DEBUG"
 } else {
     DEFINES += "NDEBUG"
+    CONFIG += optimize_full
+    QMAKE_CXXFLAGS_RELEASE *= -mtune=native
+    QMAKE_CXXFLAGS_RELEASE *= -march=native
 }
-
-INCLUDEPATH += /usr/include/python3.4m
-
-LIBS += -L/usr/lib/python3.4/config-3.4m-x86_64-linux-gnu \
-        -lpython3.4m \
-        -lpthread \
-        -ldl \
-        -lutil \
-        -lm
 
 INCLUDEPATH += ../../../include
 LIBS += -L$$OUT_PWD/../../../lib
@@ -66,34 +52,11 @@ QMAKE_LFLAGS +=  -fopenmp
 QMAKE_CXXFLAGS = -Wno-deprecated-declarations
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
     Digitizer/ATS9462/ats9462.cpp \
-    Debug/debug.cpp \
-    Digitizer/qts9462.cpp \
-    jSpectrumAnalyzer/jspectrumanalyzer.cpp \
-    jSpectrumAnalyzer/jspectrumanalyzer.tpp \
-    jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.cpp \
-    jSpectrumAnalyzer/GraphicObjects/frequencycontrols.cpp \
-    jSpectrumAnalyzer/GraphicObjects/rightclickmenu.cpp \
     Digitizer/ATS9462Engine/ats9462engine.cpp \
-    Digitizer/ATS9462Engine/ats9462engine_python_wrapper.cpp
 
-HEADERS  += mainwindow.h \
-    Digitizer/ATS9462/ats9462.h \
+HEADERS  += Digitizer/ATS9462/ats9462.h \
     Debug/debug.h \
-    Digitizer/qts9462.h \
-    jSpectrumAnalyzer/jspectrumanalyzer.h \
-    jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.h \
-    jSpectrumAnalyzer/GraphicObjects/frequencycontrols.h \
-    jSpectrumAnalyzer/GraphicObjects/rightclickmenu.h \
     Digitizer/ATS9462Engine/ats9462engine.h \
     Containers/ringbuffer.h
-
-FORMS    += mainwindow.ui \
-    jSpectrumAnalyzer/GraphicObjects/chartscalecontrols.ui \
-    jSpectrumAnalyzer/GraphicObjects/frequencycontrols.ui
-
-DISTFILES += \
-    Digitizer/ATS9462Engine/swigify.sh \
-    Digitizer/ATS9462Engine/ats9462engine_wrapper.i
 
